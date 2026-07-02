@@ -259,11 +259,19 @@ get_ncbi_ids <- function(taxonomy, target_region){
     search_string <- "bacteria"
   }
   
-  uid <- get_uid(taxonomy, division_filter = search_string)
-  
-  tax_ids <- uid[1:length(uid)]
-  
-  return(tax_ids)
+  map_chr(taxonomy, function(taxon) {
+    uid <- NA_character_
+    for (attempt in 1:3) {
+      result <- tryCatch(
+        get_uid(taxon, division_filter = search_string),
+        error = function(cnd) cnd
+      )
+      if (inherits(result, "error")) next
+      uid <- result[1]
+      break
+    }
+    uid
+  })
   
 }
 
