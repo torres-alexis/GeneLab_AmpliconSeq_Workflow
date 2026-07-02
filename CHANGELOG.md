@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.9](https://github.com/nasa/GeneLab_AmpliconSeq_Workflow/tree/DEV_1.0.9)
+
+### Fixed
+
+- Fix NCBI taxon lookup issue by wrapping `get_ncbi_ids()` in per-taxon tryCatch with retries and returning NA on failure
+
+<br>
+
+---
+
 ## [1.0.8](https://github.com/nasa/GeneLab_AmpliconSeq_Workflow/tree/NF_AmpIllumina_1.0.8)
 
 ### Fixed
