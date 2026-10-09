@@ -434,6 +434,23 @@ common_ids <- intersect(rownames(feature_table), rownames(taxonomy_table))
 feature_table <- feature_table[common_ids,]
 taxonomy_table <- taxonomy_table[common_ids,]
 
+# ANCOMBC refuses a group with fewer than 2 samples.
+# Drop those groups and write them to samples_dropped<assay_suffix>.txt.
+group_n <- table(metadata[[group]])
+drop_groups <- names(group_n)[group_n < 2]
+if (length(drop_groups) > 0) {
+  dropped_samples <- rownames(metadata)[metadata[[group]] %in% drop_groups]
+  metadata <- metadata[!metadata[[group]] %in% drop_groups, , drop = FALSE]
+  feature_table <- feature_table[, colnames(feature_table) %in% rownames(metadata), drop = FALSE]
+  message(glue("Dropped {length(drop_groups)} groups with fewer than 2 samples ({length(dropped_samples)} samples): {paste(sort(drop_groups), collapse = ', ')}"))
+  writeLines(
+    c("Samples dropped because their group has fewer than 2 samples:",
+      paste(sort(drop_groups), collapse = "\n"),
+      "",
+      paste("Samples dropped:", length(dropped_samples))),
+    glue("{diff_abund_out_dir}{output_prefix}samples_dropped{assay_suffix}.txt")
+  )
+}
 
 # Create phyloseq object
 ps <- phyloseq(otu_table(feature_table, taxa_are_rows = TRUE),
