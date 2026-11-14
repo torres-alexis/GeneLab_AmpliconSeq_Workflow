@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Write a failure text file and continue when metadata has fewer than two groups for beta diversity and differential abundance (ANCOMBC1/2, DESeq2), same as alpha diversity
 - Fixed `assay_suffix` chained parameter evaluation, which was previously evaluated at parse time instead of runtime
 - ANCOMBC2 column renaming failing on two-group comparisons due to the new `diff_robust_*` column in ANCOMBC 2.12
+- ANCOMBC2 failing with "$ operator is invalid for atomic vectors" when dropping zero-variance taxa exposes new ones; newly named taxa are now dropped and ANCOMBC2 is run again until it returns a result or names no new taxa
 - Main and post-processing workflows failing under Nextflow's strict v2 syntax parser; moved top-level code into `workflow` blocks and removed config-level `trace_timestamp` and `parent_dir` variables
 
 ### Changed

@@ -312,35 +312,28 @@ find_bad_taxa <- function(cnd){
   return(bad_taxa)
 }
 
-# A function to run ANCOMBC2 while handling common errors
+# Drop taxa named in a zero-variance error and run ANCOMBC2 again.
+# Stop when an error names no new taxa, or the drop list would be longer than the table.
 ancombc2 <- function(data, ...) {
-  tryCatch(
-    ANCOMBC::ancombc2(data = data, ...),
-    error = function(cnd) {
-      
-      
-      res  <- find_bad_taxa(cnd)
-      if( is.data.frame(res[[1]]) ){
-        # Returns a manually created empty data.frame
-        return(res)
-      }else{
-        # Returns the names of the bad taxa to exclude from further analysis
-        bad_taxa <- res # renaming for readability
-      }
-      
-      # Second error catcher in case it fails in first one 
-      tryCatch(
-        ANCOMBC::ancombc2(data = data[!rownames(data) %in% bad_taxa, ], ...),
-        
-        error = function(cnd) {
-          # Returns a manually created empty data.frame
-          find_bad_taxa(cnd)
-        })
-      
-      
-      
+  bad_taxa <- character(0)
+  max_drops <- nrow(data)
+  repeat {
+    result <- tryCatch(
+      ANCOMBC::ancombc2(data = data[!rownames(data) %in% bad_taxa, ], ...),
+      error = function(cnd) cnd
+    )
+    if (!inherits(result, "error")) return(result)
+
+    res <- find_bad_taxa(result)
+    if (is.data.frame(res[[1]])) return(res)
+
+    new_bad <- setdiff(res, bad_taxa)
+    if (length(new_bad) == 0 || length(bad_taxa) + length(new_bad) > max_drops) {
+      stop(conditionMessage(result))
     }
-  )
+    message("ANCOMBC2 excluding: ", paste(new_bad, collapse = ", "))
+    bad_taxa <- c(bad_taxa, new_bad)
+  }
 }
 
 taxize_options(ncbi_sleep = 2)
@@ -524,28 +517,27 @@ ref_group <- group_levels[1]
 tse[[group]] <- factor(tse[[group]] , levels = group_levels)
 
 message("Running ANCOMBC2....")
-# Run acombc2
-output <- ancombc2(data = tse, assay_name = "counts", tax_level = NULL,
-                   fix_formula = group, rand_formula = NULL,
-                   p_adj_method = "fdr", pseudo_sens = TRUE,
-                   prv_cut = prevalence_cutoff, 
-                   lib_cut = library_cutoff, s0_perc = 0.05,
-                   group = group, struc_zero = remove_struc_zero, neg_lb = FALSE,
-                   alpha = 0.05, n_cl = threads, verbose = TRUE,
-                   global = FALSE, pairwise = TRUE, 
-                   dunnet = FALSE, trend = FALSE,
-                   iter_control = list(tol = 1e-5, max_iter = 20,
-                                       verbose = FALSE),
-                   em_control = list(tol = 1e-5, max_iter = 100),
-                   mdfdr_control = list(fwer_ctrl_method = "fdr", B = 100), 
-                   lme_control = NULL, trend_control = NULL)
-
 # For 2-group comparisons, use res instead of mapping across pairwise results in res_pair
 is_two_group <- length(unique(tse[[group]])) == 2
 
 # Create new column names - the original column names given by ANCOMBC are
 # difficult to understand
 tryCatch({
+  output <- ancombc2(data = tse, assay_name = "counts", tax_level = NULL,
+                     fix_formula = group, rand_formula = NULL,
+                     p_adj_method = "fdr", pseudo_sens = TRUE,
+                     prv_cut = prevalence_cutoff,
+                     lib_cut = library_cutoff, s0_perc = 0.05,
+                     group = group, struc_zero = remove_struc_zero, neg_lb = FALSE,
+                     alpha = 0.05, n_cl = threads, verbose = TRUE,
+                     global = FALSE, pairwise = TRUE,
+                     dunnet = FALSE, trend = FALSE,
+                     iter_control = list(tol = 1e-5, max_iter = 20,
+                                         verbose = FALSE),
+                     em_control = list(tol = 1e-5, max_iter = 100),
+                     mdfdr_control = list(fwer_ctrl_method = "fdr", B = 100),
+                     lme_control = NULL, trend_control = NULL)
+
   if(is_two_group) {
     group_cols <- colnames(output$res)[grepl(paste0("^[a-zA-Z_]+_", group), colnames(output$res))]
     if(length(group_cols) == 0) {
@@ -567,7 +559,7 @@ tryCatch({
     paired_stats_df <- output$res_pair %>% set_names(new_colnames)
   }
 }, error = function(e) {
-  writeLines(c("ANCOMBC2 script failed at res_pair processing:", e$message,
+  writeLines(c("ANCOMBC2 script failed:", e$message,
               "\n\nDiagnostics:",
               paste("- Number of taxa after filtering:", nrow(taxonomy_table)),
               paste("- Number of groups:", length(unique(tse[[group]]))),
