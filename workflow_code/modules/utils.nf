@@ -20,7 +20,7 @@ process SOFTWARE_VERSIONS {
         path(software_versions)
 
     output:
-        path("software_versions${assaySuffix()}.txt"), emit: software_versions_txt
+        path({ "software_versions${assaySuffix()}.txt" }), emit: software_versions_txt
 
     script:
         """
