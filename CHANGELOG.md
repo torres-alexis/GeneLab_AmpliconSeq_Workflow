@@ -45,7 +45,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Modified `nextflow_schema.json` to reflect updated pipeline parameters with improved parameter descriptions and group definitions 
 - Wired up `nf-schema` plugin to `nextflow_schema.json` for parameter validation and automated help menu generation
 - Bumped `nf-schema` plugin from 2.6.0 to 2.8.0 and require Nextflow 26.04 or later
-- Updated `post_processing.config` to support running the post-processing workflow with `-C` instead of `-c` (i.e., disregards the default `nextflow.config` and uses only `post_processing.config` ); modified launch scripts (`launch.sh` and `slurm_submit.slurm`) accordingly 
+- Updated `post_processing.config` to support running the post-processing workflow with `-C` instead of `-c` (i.e., disregards the default `nextflow.config` and uses only `post_processing.config` ); modified launch scripts (`launch.sh` and `slurm_submit.slurm`) accordingly
+- Prepend the target region to `assay_suffix` by default, e.g. a 16S run publishes `_16S_GLAmpSeq`. Disable with `--prepend_target_region false` 
 
 - Updated database versions:
   - SILVA_SSU_r138.2_v2, downloaded from DECIPHER and uploaded to Figshare (https://doi.org/10.6084/m9.figshare.32118616) in April 2026 

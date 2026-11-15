@@ -26,7 +26,7 @@ include { ANCOMBC as ANCOMBC1 } from './modules/ancombc.nf'
 include { ANCOMBC as ANCOMBC2 } from './modules/ancombc.nf'
 include { DESEQ } from './modules/deseq.nf'
 include { ZIP as ZIP_DA; ZIP as ZIP_ANCOMBC1; ZIP as ZIP_ANCOMBC2; ZIP as ZIP_DESEQ2 } from './modules/zip.nf'
-include { SOFTWARE_VERSIONS; cleanedPrefix } from './modules/utils.nf'
+include { SOFTWARE_VERSIONS; cleanedPrefix; assaySuffix } from './modules/utils.nf'
 
 // A function to delete white spaces from an input string and covert it to lower case
 def deleteWS(string){
@@ -61,7 +61,7 @@ workflow {
          Input csv file : ${params.input_file}
          Output directory: ${params.outdir}
          Database Store Directory: ${params.database_store_path}
-         Genelab Assay Suffix: ${params.assay_suffix}
+         Genelab Assay Suffix: ${assaySuffix()}
          Output Prefix: ${params.output_prefix}
          Trim Primers: ${params.trim_primers}
 
@@ -242,10 +242,10 @@ workflow {
             .map { file ->
                     // derive sample_id from filename
                     def sample_id
-                    if (file.name.endsWith("${params.assay_suffix}_R1_filtered.fastq.gz")) {
-                            sample_id = file.name.replace("${params.assay_suffix}_R1_filtered.fastq.gz", "")
-                    } else if (file.name.endsWith("${params.assay_suffix}_R2_filtered.fastq.gz")) {
-                            sample_id = file.name.replace("${params.assay_suffix}_R2_filtered.fastq.gz", "")
+                    if (file.name.endsWith("${assaySuffix()}_R1_filtered.fastq.gz")) {
+                            sample_id = file.name.replace("${assaySuffix()}_R1_filtered.fastq.gz", "")
+                    } else if (file.name.endsWith("${assaySuffix()}_R2_filtered.fastq.gz")) {
+                            sample_id = file.name.replace("${assaySuffix()}_R2_filtered.fastq.gz", "")
                     }
 
                     tuple(sample_id, file)
@@ -281,7 +281,7 @@ workflow {
         values = ["samples": "Sample Name",
                 "group" : "groups",
                 "depth" : params.rarefaction_depth,
-                "assay_suffix" : params.assay_suffix,
+                "assay_suffix" : assaySuffix(),
                 "output_prefix" : cleanedPrefix(),
                 "target_region" : params.target_region,
                 "library_cutoff" : params.library_cutoff,
@@ -297,7 +297,7 @@ workflow {
         values = ["samples": params.samples_column,
                 "group" : params.group,
                 "depth" : params.rarefaction_depth,
-                "assay_suffix" : params.assay_suffix,
+                "assay_suffix" : assaySuffix(),
                 "output_prefix" : cleanedPrefix(),
                 "target_region" : params.target_region,
                 "library_cutoff" : params.library_cutoff,

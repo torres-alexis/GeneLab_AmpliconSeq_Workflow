@@ -49,7 +49,12 @@
                 "assay_suffix": {
                     "type": "string",
                     "default": "_GLAmpSeq",
-                    "description": "A string appended to output file names to label the assay type."
+                    "description": "A string appended to output file names to label the assay type. When --prepend_target_region is true, the target region is inserted in front of this string."
+                },
+                "prepend_target_region": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "If true, prepend --target_region to --assay_suffix (a 16S run publishes _16S_GLAmpSeq). Set to false to use --assay_suffix as written."
                 },
                 "output_prefix": {
                     "type": "string",

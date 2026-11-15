@@ -232,7 +232,8 @@ nextflow run main.nf \
 * `--left_maxEE` - Maximum expected errors allowed in forward reads (type: integer, default: 1)
 * `--right_maxEE` - Maximum expected errors allowed in reverse reads (type: integer, default: 1)
 * `--output_prefix` - Prefix to add to output filenames, e.g. "Study1_". If the string is not empty and does not end with '_' or '-', an underscore will be automatically appended (type: string, default: "")
-* `--assay_suffix` - Suffix to add to output filenames (type: string, default: "_GLAmpSeq" that can be prepended with "\_<target_region>")
+* `--assay_suffix` - Suffix to add to output filenames (type: string, default: "_GLAmpSeq")
+* `--prepend_target_region` - If true, prepend `--target_region` to `--assay_suffix` (type: boolean, default: true). A 16S run publishes `_16S_GLAmpSeq`. Set to false to use `--assay_suffix` as written.
 * `--force_single_end` - Force single-end mode by specifying which read to use (type: string, options: "R1" or "R2", default: null)
 
 <br>

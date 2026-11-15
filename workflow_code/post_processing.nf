@@ -2,6 +2,7 @@ nextflow.enable.dsl=2
 
 include { validateParameters; paramsHelp } from 'plugin/nf-schema'
 
+include { assaySuffix } from './modules/utils.nf'
 include { PACKAGE_PROCESSING_INFO; GENERATE_README; VALIDATE_PROCESSING;
            GENERATE_CURATION_TABLE; GENERATE_MD5SUMS; GENERATE_PROTOCOL} from './modules/genelab.nf'
 
@@ -31,7 +32,7 @@ workflow {
          OSD Accession : ${params.OSD_accession}
          Input Runsheet: ${params.runsheet}
          Output Directory: ${params.outdir}
-         Assay Suffix: ${params.assay_suffix}
+         Assay Suffix: ${assaySuffix()}
          Output Prefix: ${params.output_prefix}
          Target Files: ${params.target_files}
 
@@ -85,7 +86,7 @@ workflow {
      
        software_versions_ch   =  channel.fromPath("${processed_dir}/GeneLab/software_versions_*.txt")
        rarefaction_depth_ch =  channel
-                                  .fromPath("${processed_dir}/Final_Outputs/alpha_diversity/*rarefaction_depth${params.assay_suffix}.txt")
+                                  .fromPath("${processed_dir}/Final_Outputs/alpha_diversity/*rarefaction_depth${assaySuffix()}.txt")
                                   ifEmpty { file("empty_depth.txt").tap { it.text = "" } }
 
 
