@@ -7,7 +7,7 @@ process PACKAGE_PROCESSING_INFO {
     input:
         path(processing_scripts_dir) 
     output:
-        path("${cleanedPrefix()}processing_info${params.assay_suffix}.zip"), emit: zip
+        path({ "${cleanedPrefix()}processing_info${params.assay_suffix}.zip" }), emit: zip
 
     script:
         """
@@ -31,7 +31,7 @@ process GENERATE_README {
     tag "Generating README for ${params.OSD_accession}"
 
     output:
-        path("${cleanedPrefix()}README${params.assay_suffix}.txt"), emit: readme
+        path({ "${cleanedPrefix()}README${params.assay_suffix}.txt" }), emit: readme
 
     script:
         def raw_reads = params.include_raw_data ? "--include-raw-reads" : ""
@@ -65,7 +65,7 @@ process VALIDATE_PROCESSING {
         path(processing_info)
 
     output:
-        path("${params.GLDS_accession}_${cleanedPrefix()}amplicon-validation${params.assay_suffix}.log"), emit: log
+        path({ "${params.GLDS_accession}_${cleanedPrefix()}amplicon-validation${params.assay_suffix}.log" }), emit: log
 
     script:
         def raw_fastq = params.include_raw_data ? "--include-raw-fastq" : ""
@@ -109,7 +109,7 @@ process GENERATE_CURATION_TABLE {
         path(final_outputs_dir) // passed so the process has access to final outputs to get alpha/beta diversity, taxonomy plots, and DA outputs
 
     output:
-        path("${params.GLDS_accession}_${cleanedPrefix()}associated-file-names${params.assay_suffix}.tsv"), emit: curation_table
+        path({ "${params.GLDS_accession}_${cleanedPrefix()}associated-file-names${params.assay_suffix}.tsv" }), emit: curation_table
 
     script:
         def primers_flag = params.trim_primers ? "" : "--primers-already-trimmed"
@@ -149,8 +149,8 @@ process GENERATE_MD5SUMS {
         val(done_token)
 
     output:
-        path("${cleanedPrefix()}raw_md5sum${params.assay_suffix}.tsv"), emit: raw_md5sum, optional: true
-        path("${cleanedPrefix()}processed_md5sum${params.assay_suffix}.tsv"), emit: processed_md5sum
+        path({ "${cleanedPrefix()}raw_md5sum${params.assay_suffix}.tsv" }), emit: raw_md5sum, optional: true
+        path({ "${cleanedPrefix()}processed_md5sum${params.assay_suffix}.tsv" }), emit: processed_md5sum
     script:
         def raw_md5_flag = (!params.force_single_end && params.include_raw_data) ? "--generate_raw_md5sums" : ""
         def primers_flag = params.trim_primers ? "" : "--primers_already_trimmed"
