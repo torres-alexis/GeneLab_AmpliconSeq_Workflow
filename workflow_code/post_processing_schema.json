@@ -20,7 +20,7 @@
         "runsheet": {
           "type": "string",
           "format": "file-path",
-          "description": "Path to the Amplicon 4/5-column upload CSV (GLfile.csv for accession post-processing)."
+          "description": "Path to the Normalized Amplicon runsheet published in Metadata."
         },
         "GLDS_accession": {
           "type": "string",
@@ -253,7 +253,7 @@
         },
         "input_file": {
           "type": "string",
-          "description": "Legacy alias for --runsheet. Amplicon upload CSV columns are sample_id,forward,[reverse,]paired,groups. Upload analysis requires --F_primer and --R_primer only when --trim_primers is true; --stage_only does not require primers.",
+          "description": "Legacy alias for --runsheet. Amplicon runsheet CSV columns are sample_id,forward,[reverse,]paired,groups. Upload analysis requires --F_primer and --R_primer only when --trim_primers is true; --stage_only does not require primers.",
           "format": "file-path",
           "hidden": true
         },

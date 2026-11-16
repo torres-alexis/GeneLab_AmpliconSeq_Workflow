@@ -102,7 +102,7 @@ workflow AMPLICON {
     staged_reads_ch = STAGE_INPUTS.out.staged_reads
     runsheet_ch = STAGE_INPUTS.out.runsheet
     isa_archive_ch = STAGE_INPUTS.out.isa_archive
-    gl_file_ch = STAGE_INPUTS.out.gl_file
+    source_runsheet_ch = STAGE_INPUTS.out.source_runsheet
     primers_ch = STAGE_INPUTS.out.primers
     ch_input_file = runsheet_ch
     STAGE_INPUTS.out.software_versions | mix(software_versions_ch) | set { software_versions_ch }
@@ -205,39 +205,17 @@ workflow AMPLICON {
 
 
     // Diversity, differential abundance testing and their corresponding visualizations
-    if(params.accession){
-
-        values = ["samples": "Sample Name",
-                "group" : "groups",
-                "depth" : params.rarefaction_depth,
-                "assay_suffix" : assaySuffix(),
-                "output_prefix" : cleanedPrefix(),
-                "target_region" : params.target_region,
-                "library_cutoff" : params.library_cutoff,
-                "prevalence_cutoff" : params.prevalence_cutoff,
-                "rare" : enabled(params.remove_rare) ? "--remove-rare" : "",
-                "struc_zero": enabled(params.remove_struc_zeros) ? "--remove-structural-zeros" : ""
-                ]
-
-        metadata  =  runsheet_ch
-
-    }else{
-
-        values = ["samples": params.samples_column,
-                "group" : params.group,
-                "depth" : params.rarefaction_depth,
-                "assay_suffix" : assaySuffix(),
-                "output_prefix" : cleanedPrefix(),
-                "target_region" : params.target_region,
-                "library_cutoff" : params.library_cutoff,
-                "prevalence_cutoff" : params.prevalence_cutoff,
-                "rare" :  enabled(params.remove_rare) ? "--remove-rare" : "",
-                "struc_zero": enabled(params.remove_struc_zeros) ? "--remove-structural-zeros" : ""
-                ]
-
-        metadata  =  ch_input_file
-
-    }
+    values = ["samples": "sample_id",
+              "group": "groups",
+              "depth": params.rarefaction_depth,
+              "assay_suffix": assaySuffix(),
+              "output_prefix": cleanedPrefix(),
+              "target_region": params.target_region,
+              "library_cutoff": params.library_cutoff,
+              "prevalence_cutoff": params.prevalence_cutoff,
+              "rare": enabled(params.remove_rare) ? "--remove-rare" : "",
+              "struc_zero": enabled(params.remove_struc_zeros) ? "--remove-structural-zeros" : ""]
+    metadata = runsheet_ch
     meta  = channel.of(values)
 
     // Diversity analysis
@@ -453,7 +431,7 @@ workflow AMPLICON {
 
     ch_published = pub(runsheet_ch.mix(isa_archive_ch), 'Metadata')
         .mix(
-            pub(gl_file_ch, 'Metadata'),
+            pub(source_runsheet_ch, 'Metadata/source'),
             pub(staged_reads_ch.map { id, reads, paired -> reads }, 'Raw_Sequence_Data'),
             pub(trimmed_reads_ch.mix(trimmed_reads_counts, cutadapt_logs), 'Trimmed_Sequence_Data'),
             pub(filtered_reads_ch.map { id, reads, paired -> reads }.mix(filtered_count), 'Filtered_Sequence_Data'),

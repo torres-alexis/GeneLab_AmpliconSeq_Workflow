@@ -8,7 +8,7 @@
         "input_output_options": {
             "title": "Input/Output Options",
             "type": "object",
-            "description": "Define where the pipeline should find input data and save output files. Provide either a GeneLab/OSD accession number or a local input CSV file \u2014 one of the two is required. If both are supplied, --accession takes precedence and --input_file is ignored.",
+            "description": "Define where the pipeline should find input data and save output files. Provide either a GeneLab/OSD accession number or a local input CSV file \u2014 one of the two is required. If a runsheet is supplied with an accession, its file paths and sample selection are used while the ISA archive is retained as metadata.",
             "default": "",
             "properties": {
                 "target_region": {
@@ -28,7 +28,7 @@
                 },
                 "input_file": {
                     "type": "string",
-                    "description": "Legacy alias for --runsheet. Amplicon upload CSV columns are sample_id,forward,[reverse,]paired,groups. Upload analysis requires --F_primer and --R_primer only when --trim_primers is true; --stage_only does not require primers.",
+                    "description": "Legacy alias for --runsheet. Amplicon runsheet CSV columns are sample_id,forward,[reverse,]paired,groups. Upload analysis requires --F_primer and --R_primer only when --trim_primers is true; --stage_only does not require primers.",
                     "format": "file-path"
                 },
                 "isa_archive": {
@@ -63,7 +63,7 @@
                 "runsheet": {
                     "type": "string",
                     "format": "file-path",
-                    "description": "Path to the Amplicon 4/5-column upload CSV (GLfile.csv for accession post-processing). Takes precedence over --input_file."
+                    "description": "Path to the Normalized Amplicon runsheet published in Metadata. Takes precedence over --input_file."
                 }
             },
             "required": [

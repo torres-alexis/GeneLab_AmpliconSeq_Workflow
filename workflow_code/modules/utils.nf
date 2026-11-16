@@ -15,6 +15,10 @@ def filteredSampleId(name, assay_suffix) {
     return name.substring(0, name.length() - ending.length())
 }
 
+def shellQuote(value) {
+    return "'" + value.toString().replace("'", "'\"'\"'") + "'"
+}
+
 def pub(ch, dir) {
     return ch.flatten().map { f -> ["${dir}/${f.name}".toString(), f] }
 }
