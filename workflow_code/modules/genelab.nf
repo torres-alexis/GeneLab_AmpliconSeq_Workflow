@@ -1,4 +1,4 @@
-include { cleanedPrefix; assaySuffix } from './utils.nf'
+include { enabled; cleanedPrefix; assaySuffix } from './utils.nf'
 
 process PACKAGE_PROCESSING_INFO {
 
@@ -34,9 +34,9 @@ process GENERATE_README {
         path({ "${cleanedPrefix()}README${assaySuffix()}.txt" }), emit: readme
 
     script:
-        def raw_reads = params.include_raw_data ? "--include-raw-reads" : ""
-        def trimmed_reads = params.trim_primers ? "" : "--primers_already_trimmed"
-        def single_end = params.single_end ? "--single-end" : ""
+        def raw_reads = enabled(params.include_raw_data) ? "--include-raw-reads" : ""
+        def trimmed_reads = enabled(params.trim_primers) ? "" : "--primers_already_trimmed"
+        def single_end = enabled(params.single_end) ? "--single-end" : ""
         def force_single_end = params.force_single_end ? "--force-single-end ${params.force_single_end}" : ""
         """    
         GL-gen-processed-data-amplicon-readme-updated.py \\
@@ -68,9 +68,9 @@ process VALIDATE_PROCESSING {
         path({ "${params.GLDS_accession}_${cleanedPrefix()}amplicon-validation${assaySuffix()}.log" }), emit: log
 
     script:
-        def raw_fastq = params.include_raw_data ? "--include-raw-fastq" : ""
-        def primers_flag = params.trim_primers ? "" : "--primers-already-trimmed"
-        def single_end_flag = params.single_end ? "--single-ended" : ""
+        def raw_fastq = enabled(params.include_raw_data) ? "--include-raw-fastq" : ""
+        def primers_flag = enabled(params.trim_primers) ? "" : "--primers-already-trimmed"
+        def single_end_flag = enabled(params.single_end) ? "--single-ended" : ""
         def force_single_end = params.force_single_end ? "--force-single-end ${params.force_single_end}" : ""
         """
         GL-validate-processed-amplicon-data \\
@@ -112,11 +112,11 @@ process GENERATE_CURATION_TABLE {
         path({ "${params.GLDS_accession}_${cleanedPrefix()}associated-file-names${assaySuffix()}.tsv" }), emit: curation_table
 
     script:
-        def primers_flag = params.trim_primers ? "" : "--primers-already-trimmed"
-        def single_end_flag = params.single_end ? "--single-ended" : ""
+        def primers_flag = enabled(params.trim_primers) ? "" : "--primers-already-trimmed"
+        def single_end_flag = enabled(params.single_end) ? "--single-ended" : ""
         def force_single_end = params.force_single_end ? "--force-single-end ${params.force_single_end}" : ""
-        def include_raw_fastq_flag = params.include_raw_data ? "--include-raw-fastq" : ""
-        def include_raw_multiqc_flag = params.include_raw_multiqc ? "--include-raw-multiqc-in-output" : ""        
+        def include_raw_fastq_flag = enabled(params.include_raw_data) ? "--include-raw-fastq" : ""
+        def include_raw_multiqc_flag = enabled(params.include_raw_multiqc) ? "--include-raw-multiqc-in-output" : ""
         """
 
         GL-gen-amplicon-file-associations-table-GLfile.py --GL-file ${input_table} \\
@@ -152,8 +152,8 @@ process GENERATE_MD5SUMS {
         path({ "${cleanedPrefix()}raw_md5sum${assaySuffix()}.tsv" }), emit: raw_md5sum, optional: true
         path({ "${cleanedPrefix()}processed_md5sum${assaySuffix()}.tsv" }), emit: processed_md5sum
     script:
-        def raw_md5_flag = (!params.force_single_end && params.include_raw_data) ? "--generate_raw_md5sums" : ""
-        def primers_flag = params.trim_primers ? "" : "--primers_already_trimmed"
+        def raw_md5_flag = (!params.force_single_end && enabled(params.include_raw_data)) ? "--generate_raw_md5sums" : ""
+        def primers_flag = enabled(params.trim_primers) ? "" : "--primers_already_trimmed"
         """
         generate_md5sums.py --outdir ${processed_dir} --assay_suffix '${assaySuffix()}' --output_prefix '${cleanedPrefix()}' ${raw_md5_flag} ${primers_flag}
         """
@@ -172,11 +172,12 @@ process GENERATE_PROTOCOL {
     output:
         path("protocol.txt"), emit: protocol
     script:
-        def trim_flag = params.trim_primers ? "--trim_primers" : ""
+        def depth_flag = rarefaction_depth ? "--rarefaction_depth_file ${rarefaction_depth}" : ""
+        def trim_flag = enabled(params.trim_primers) ? "--trim_primers" : ""
         def force_single_end_flag = params.force_single_end ? "--force_single_end ${params.force_single_end}" : ""
         """
         generate_protocol.py ${software_versions} ${protocol_id} \\
-            --rarefaction_depth_file ${rarefaction_depth} \\
+            ${depth_flag} \\
             --target_region ${params.target_region} \\
             --trunc_len "${params.left_trunc},${params.right_trunc}" \\
             --max_ee "${params.left_maxEE},${params.right_maxEE}" \\

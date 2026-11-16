@@ -1,8 +1,8 @@
+include { enabled; cleanedPrefix; assaySuffix } from './utils.nf'
 /**************************************************************************************** 
 *********************  ASV generation using Dada2 ***************************************
 ****************************************************************************************/
 
-include { cleanedPrefix; assaySuffix } from './utils.nf'
 
 process RUN_DADA2 {
 
@@ -11,23 +11,23 @@ process RUN_DADA2 {
     input:
         tuple path(sample_IDs_file), val(isPaired)
         path(reads)
-        path(trimmed_read_counts) // or dummy NO_FILE if no trimming
+        path(trimmed_read_counts) // empty list when primer trimming is disabled
         path(database)
     output:
         path("*_filtered.fastq.gz"),                                               emit: reads
-        path("${cleanedPrefix()}filtered-read-counts${assaySuffix()}.tsv"), emit: filtered_count
-        path("${cleanedPrefix()}taxonomy${assaySuffix()}.tsv"),             emit: taxonomy
-        path("${cleanedPrefix()}taxonomy-and-counts${assaySuffix()}.biom"), emit: biom
-        path("${cleanedPrefix()}ASVs${assaySuffix()}.fasta"),               emit: fasta
-        path("${cleanedPrefix()}read-count-tracking${assaySuffix()}.tsv"),  emit: read_count
-        path("${cleanedPrefix()}counts${assaySuffix()}.tsv"),               emit: counts
-        path("${cleanedPrefix()}taxonomy-and-counts${assaySuffix()}.tsv"),  emit: taxonomy_count
+        path({ "${cleanedPrefix()}filtered-read-counts${assaySuffix()}.tsv" }), emit: filtered_count
+        path({ "${cleanedPrefix()}taxonomy${assaySuffix()}.tsv" }),             emit: taxonomy
+        path({ "${cleanedPrefix()}taxonomy-and-counts${assaySuffix()}.biom" }), emit: biom
+        path({ "${cleanedPrefix()}ASVs${assaySuffix()}.fasta" }),               emit: fasta
+        path({ "${cleanedPrefix()}read-count-tracking${assaySuffix()}.tsv" }),  emit: read_count
+        path({ "${cleanedPrefix()}counts${assaySuffix()}.tsv" }),               emit: counts
+        path({ "${cleanedPrefix()}taxonomy-and-counts${assaySuffix()}.tsv" }),  emit: taxonomy_count
         path("versions.txt"),                                                      emit: version
     script:
-        def input_dir     = params.trim_primers ? "Trimmed_Sequence_Data/" : "raw_reads/"
-        def trimmed_count = params.trim_primers ? "${trimmed_read_counts}" : ""
+        def input_dir     = enabled(params.trim_primers) ? "Trimmed_Sequence_Data/" : "raw_reads/"
+        def trimmed_count = enabled(params.trim_primers) ? "${trimmed_read_counts}" : ""
         
-        def starting_reads_suffix = params.trim_primers ? "trimmed" : "raw"
+        def starting_reads_suffix = enabled(params.trim_primers) ? "trimmed" : "raw"
         def R1_suffix     = "${assaySuffix()}_R1_${starting_reads_suffix}.fastq.gz"   
         def R2_suffix     = "${assaySuffix()}_R2_${starting_reads_suffix}.fastq.gz"
         def single_end_suffix = isPaired == "false" ? (
@@ -57,7 +57,7 @@ process RUN_DADA2 {
                 "${params.right_trunc}" \\
                 "${params.left_maxEE}" \\
                 "${params.right_maxEE}" \\
-                "${params.trim_primers ? 'TRUE' : 'FALSE'}" \\
+                "${enabled(params.trim_primers) ? 'TRUE' : 'FALSE'}" \\
                 ${sample_IDs_file} \\
                 "${input_dir}" \\
                 "${R1_suffix}" \\
@@ -66,14 +66,14 @@ process RUN_DADA2 {
                 "${filtered_R2_suffix}" \\
                 "${cleanedPrefix()}" \\
                 "${params.target_region}" \\
-                "${params.concatenate_reads_only ? 'TRUE' : 'FALSE'}" \\
+                "${enabled(params.concatenate_reads_only) ? 'TRUE' : 'FALSE'}" \\
                 "${assaySuffix()}" \\
                 "${database.name}"
         else
             Illumina-SE-R-processing.R \\
                 "${params.left_trunc}" \\
                 "${params.left_maxEE}" \\
-                "${params.trim_primers ? 'TRUE' : 'FALSE'}" \\
+                "${enabled(params.trim_primers) ? 'TRUE' : 'FALSE'}" \\
                 ${sample_IDs_file} \\
                 "${input_dir}" \\
                 "${single_end_suffix}" \\

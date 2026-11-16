@@ -405,16 +405,16 @@ def create_association_table(header_colnames, multiqc,
         curr_row_as_list.extend([", ".join(curr_trimmed_data),
                                  ", ".join(curr_filt_data),
                                  filtered_multiqc,
-                                 final_outputs_dict["Taxonomy and ASV Counts Data"],
-                                 final_outputs_dict["Alpha Diversity Data"],
-                                 final_outputs_dict["Beta Diversity Data"],
-                                 final_outputs_dict["Beta Diversity Data/Bray-Curtis"],
-                                 final_outputs_dict["Beta Diversity Data/Euclidean_distance"],
-                                 final_outputs_dict["Taxonomy Plots"],
-                                 final_outputs_dict["Differential Abundance"],
-                                 final_outputs_dict["Differential Abundance/ANCOMBC1"],
-                                 final_outputs_dict["Differential Abundance/ANCOMBC2"],
-                                 final_outputs_dict["Differential Abundance/DESeq2"]])
+                                 final_outputs_dict.get("Taxonomy and ASV Counts Data", ""),
+                                 final_outputs_dict.get("Alpha Diversity Data", ""),
+                                 final_outputs_dict.get("Beta Diversity Data", ""),
+                                 final_outputs_dict.get("Beta Diversity Data/Bray-Curtis", ""),
+                                 final_outputs_dict.get("Beta Diversity Data/Euclidean_distance", ""),
+                                 final_outputs_dict.get("Taxonomy Plots", ""),
+                                 final_outputs_dict.get("Differential Abundance", ""),
+                                 final_outputs_dict.get("Differential Abundance/ANCOMBC1", ""),
+                                 final_outputs_dict.get("Differential Abundance/ANCOMBC2", ""),
+                                 final_outputs_dict.get("Differential Abundance/DESeq2", "")])
 
         # Append row to the association dataframe
         association_df.loc[len(association_df)] = curr_row_as_list
@@ -518,7 +518,7 @@ def main():
         multiqc = [file_prefix + output_prefix + raw_multiqc_html + "," + file_prefix + output_prefix + raw_multiqc_zip, 
                   file_prefix + output_prefix + filtered_multiqc_html + "," + file_prefix + output_prefix + filtered_multiqc_zip]
     else:
-        multiqc = [file_prefix + output_prefix + filtered_multiqc_html + "," + file_prefix + output_prefix + filtered_multiqc_zip]
+        multiqc = file_prefix + output_prefix + filtered_multiqc_html + "," + file_prefix + output_prefix + filtered_multiqc_zip
     
     # Retrieve a dictionary with sample names as keys and raw fastqfile prefix as values 
     sample_raw_prefix_dict = runsheet_to_dict(args.runsheet) if args.runsheet != "" else ""

@@ -1,8 +1,8 @@
+include { enabled; cleanedPrefix; assaySuffix } from './utils.nf'
 /**************************************************************************************** 
 *********************  Adapter and primer trimming with cutadapt *************************
 ****************************************************************************************/
 
-include { cleanedPrefix; assaySuffix } from './utils.nf'
 
 process CUTADAPT {
 
@@ -19,10 +19,10 @@ process CUTADAPT {
         path("versions.txt"), emit: version
 
     script:
-    def discard_untrimmed_flag = params.discard_untrimmed ? "--discard-untrimmed" : ""
+    def discard_untrimmed_flag = enabled(params.discard_untrimmed) ? "--discard-untrimmed" : ""
     def single_end_primers = params.force_single_end == 'R2' ?
-        (params.primers_linked ? '-a ${R_linked_primer}' : '-g ${R_primer}') :
-        (params.primers_linked ? '-a ${F_linked_primer}' : '-g ${F_primer}')
+        (enabled(params.primers_linked) ? '-a ${R_linked_primer}' : '-g ${R_primer}') :
+        (enabled(params.primers_linked) ? '-a ${F_linked_primer}' : '-g ${F_primer}')
     
     def primer_trimmed_R1_suffix = "${assaySuffix()}_R1_trimmed.fastq.gz"
     def primer_trimmed_R2_suffix = "${assaySuffix()}_R2_trimmed.fastq.gz"    
@@ -49,8 +49,8 @@ process CUTADAPT {
 
     if [ ${isPaired} == "true" ]; then
             
-        cutadapt ${params.primers_linked ? '-a \${F_linked_primer}' : '-g \${F_primer}' } \\
-                 ${params.primers_linked ? '-A \${R_linked_primer}' : '-G \${R_primer}'} \\
+        cutadapt ${enabled(params.primers_linked) ? '-a \${F_linked_primer}' : '-g \${F_primer}' } \\
+                 ${enabled(params.primers_linked) ? '-A \${R_linked_primer}' : '-G \${R_primer}'} \\
                  -o ${sample_id}${primer_trimmed_R1_suffix} \\
                  -p ${sample_id}${primer_trimmed_R2_suffix}  \\
                  ${discard_untrimmed_flag} \\
@@ -93,8 +93,8 @@ process COMBINE_CUTADAPT_LOGS_AND_SUMMARIZE {
         path(logs)
         path(runsheet_ch)
     output:
-        path("${cleanedPrefix()}cutadapt${assaySuffix()}.log"), emit: logs
-        path("${cleanedPrefix()}trimmed-read-counts${assaySuffix()}.tsv"), emit: counts
+        path({ "${cleanedPrefix()}cutadapt${assaySuffix()}.log" }), emit: logs
+        path({ "${cleanedPrefix()}trimmed-read-counts${assaySuffix()}.tsv" }), emit: counts
     script:
         """
         cat ${logs} > ${cleanedPrefix()}cutadapt${assaySuffix()}.log

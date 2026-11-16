@@ -8,7 +8,7 @@ process ZIP {
     tuple val(label), path(files)
 
     output:
-    path("${cleanedPrefix()}${label}${assaySuffix()}*.zip"), emit: zip
+    path({ "${cleanedPrefix()}${label}${assaySuffix()}*.zip" }), emit: zip
     path("versions.txt"), emit: version
 
     script:
