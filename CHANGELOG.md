@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ### Fixed
+
+- Pin `r-cvxr=1.0_15` and `r-rbiom=2.2.1` for the Conda diversity environment.
 - Removed the browser user-agent override from reference database downloads
 - Write a failure text file and continue when metadata has fewer than two groups for beta diversity and differential abundance (ANCOMBC1/2, DESeq2), same as alpha diversity
 - Fixed `assay_suffix` chained parameter evaluation, which was previously evaluated at parse time instead of runtime
