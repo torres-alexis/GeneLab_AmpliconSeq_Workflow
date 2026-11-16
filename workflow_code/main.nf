@@ -1,10 +1,12 @@
-include { enabled } from './modules/utils.nf'
+include { enabled; assaySuffix } from './modules/utils.nf'
 nextflow.enable.dsl = 2
 
 include { validateParameters; paramsHelp } from 'plugin/nf-schema'
 include { AMPLICON } from './workflows/amplicon.nf'
 include { POST_PROCESSING } from './workflows/post_processing.nf'
 include { STAGE_INPUTS } from './subworkflows/stage_inputs.nf'
+include { CAPTURE_PROCESSING_RECORDS } from './modules/genelab.nf'
+
 
 workflow {
     main:
@@ -31,11 +33,34 @@ workflow {
         STAGE_INPUTS()
         ch_published = STAGE_INPUTS.out.published
     } else {
+        def run = [run_name: workflow.runName, session_id: workflow.sessionId.toString(),
+                   command: workflow.commandLine, entry_point: params.entry_point,
+                   target_region: params.target_region, assay_suffix: assaySuffix(),
+                   profile: workflow.profile, nextflow_version: nextflow.version.toString(),
+                   launch_dir: workflow.launchDir.toString(), project_dir: workflow.projectDir.toString(),
+                   work_dir: workflow.workDir.toString(), output_dir: file(params.outdir).toString()]
+        if (!workflow.preview && !workflow.stubRun) WorkflowProvenance.begin(file(params.outdir), run)
         AMPLICON()
         ch_published = AMPLICON.out.published
+        if (!workflow.preview && !workflow.stubRun) {
+            def completed_outputs = ch_published.count()
+            CAPTURE_PROCESSING_RECORDS(completed_outputs, file(params.outdir), assaySuffix(), run)
+        }
     }
     publish:
     published = ch_published
+    onComplete:
+    if (!workflow.preview && !workflow.stubRun &&
+        !enabled(params.post_processing) && !enabled(params.stage_only) &&
+        (!params.help || params.help.toString() == 'false') && !enabled(params.helpFull) && !enabled(params.version)) {
+        try {
+            WorkflowProvenance.finish(file(params.outdir), workflow.runName, workflow.sessionId.toString(),
+                workflow.success && !(workflow.failOnIgnore && workflow.stats.ignoredCount > 0))
+        } catch (Exception e) {
+            log.error "Could not finalize processing records: ${e.message}"
+            nextflow.Global.session.abort(e)
+        }
+    }
 }
 
 output {
