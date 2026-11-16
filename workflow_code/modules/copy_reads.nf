@@ -1,85 +1,42 @@
-/**
- * COPY_READS
- * 
- * This process stages raw read files and renames them to standardized naming convention.
- * 
- * For URLs: Nextflow automatically downloads them during staging, then this process
- * renames the staged files (read1.gz, read2.gz) to the expected format using configured suffixes.
- * 
- * For local files: Nextflow stages them as symlinks, then this process renames
- * them to the standardized format.
- * 
- * Input format:
- * - Paired-end: [sample_id, [R1_file, R2_file], "true"] 
- * - Single-end: [sample_id, [R1_file], "false"]
- * 
- * Output format: 
- * - Paired-end: [sample_id, [sample_R1_raw.fastq.gz, sample_R2_raw.fastq.gz], "true"]
- * - Paired-end with force_single_end: [sample_id, [sample_{R1/R2}_raw.fastq.gz], "false"]
- * - Single-end: [sample_id, [sample_R1_raw.fastq.gz], "false"]
- */
-process COPY_READS {
-    tag "${ sample_id }"
+include { assaySuffix; shellQuote } from './utils.nf'
 
-    input:
-        tuple val(sample_id), path("read?.gz"), val(paired)
-
-    output:
-        tuple val(sample_id), path("${sample_id}*.gz"), val(paired), emit: raw_reads
-
-    script:
-        if ( paired == 'true' ) {
-        """
-        cp -P read1.gz ${sample_id}${params.assay_suffix}_R1_raw.fastq.gz
-        cp -P read2.gz ${sample_id}${params.assay_suffix}_R2_raw.fastq.gz
-        """
-        } else if ( paired == 'false') {
-            if ( params.force_single_end == "R1" ) {
-            """
-            cp -P read1.gz ${sample_id}${params.assay_suffix}_R1_raw.fastq.gz
-            """
-            } else if ( params.force_single_end == "R2" ) {
-            """
-            cp -P read1.gz ${sample_id}${params.assay_suffix}_R2_raw.fastq.gz
-            """
-            } else { 
-            """
-            cp -P read1.gz ${sample_id}${params.assay_suffix}_raw.fastq.gz
-            """ 
-            }
-        }
+def stageRead(source, output, remote) {
+    def records = params.truncate_to ? params.truncate_to.toInteger() : 0
+    if (remote && records) {
+        return "wget -O download.fastq.gz ${shellQuote(source)}\nfastq_first_n.sh ${records} ${shellQuote(output)} download.fastq.gz\nrm download.fastq.gz"
+    }
+    if (remote) return "wget -O ${shellQuote(output)} ${shellQuote(source)}"
+    if (records) return "fastq_first_n.sh ${records} ${shellQuote(output)} ${shellQuote(source)}"
+    return "cp -P ${shellQuote(source)} ${shellQuote(output)}"
 }
 
+def outputReads(id, paired, stage) {
+    def prefix = "${id}${assaySuffix()}"
+    if (paired == 'true') return ["${prefix}_R1_${stage}.fastq.gz", "${prefix}_R2_${stage}.fastq.gz"]
+    def read = params.force_single_end ? "_${params.force_single_end}" : ''
+    return ["${prefix}${read}_${stage}.fastq.gz"]
+}
+
+process COPY_READS {
+    tag "${sample_id}"
+    input:
+    tuple val(sample_id), path('read?.gz'), val(paired)
+    val(stage)
+    output:
+    tuple val(sample_id), path("${sample_id}*.gz"), val(paired), emit: raw_reads
+    script:
+    def outputs = outputReads(sample_id, paired, stage)
+    outputs.withIndex().collect { name, i -> stageRead("read${i+1}.gz", name, false) }.join('\n')
+}
 
 process COPY_REMOTE_READS {
-    tag "${ sample_id }"
-
+    tag "${sample_id}"
     input:
-        tuple val(sample_id), val(paths), val(paired)
-
+    tuple val(sample_id), val(paths), val(paired)
+    val(stage)
     output:
-        tuple val(sample_id), path("${sample_id}*.gz"), val(paired), emit: raw_reads
-
+    tuple val(sample_id), path("${sample_id}*.gz"), val(paired), emit: raw_reads
     script:
-        if ( paired == 'true' ) {
-        """
-        wget -O ${sample_id}${params.assay_suffix}_R1_raw.fastq.gz '${paths[0]}'
-        wget -O ${sample_id}${params.assay_suffix}_R2_raw.fastq.gz '${paths[1]}'
-        """
-        } else if ( paired == 'false') {
-            if ( params.force_single_end == "R1" ) {
-            """
-            wget -O ${sample_id}${params.assay_suffix}_R1_raw.fastq.gz '${paths[0]}'
-            """
-            } else if ( params.force_single_end == "R2" ) {
-            """
-            wget -O ${sample_id}${params.assay_suffix}_R2_raw.fastq.gz '${paths[0]}'
-            """
-            } else { 
-            """
-            wget -O ${sample_id}${params.assay_suffix}_raw.fastq.gz '${paths[0]}'
-            """ 
-            }
-        }
-
+    def outputs = outputReads(sample_id, paired, stage)
+    outputs.withIndex().collect { name, i -> stageRead(paths[i], name, true) }.join('\n')
 }

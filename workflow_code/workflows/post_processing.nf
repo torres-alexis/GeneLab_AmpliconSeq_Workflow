@@ -68,8 +68,18 @@ workflow POST_PROCESSING {
        if (!params.runsheet) error 'Supply --runsheet'
        runsheet_ch = Channel.fromPath(params.runsheet, checkIfExists: true)
 
+       is_single_end_ch = runsheet_ch.splitCsv(header: true).toList().map { rows ->
+           def layouts = rows.collect { it.paired ?: it.paired_end ?: '' }.findAll { it }.collect { it.toString().toLowerCase() }.unique()
+           if (layouts.size() > 1 || layouts.any { !(it in ['true', 'false']) }) error 'Post-processing runsheet has inconsistent read layouts'
+           layouts ? layouts[0] == 'false' : enabled(params.single_end)
+       }
+
        def processed_dir = file(params.outdir)
-       def required_dirs = ['processing_scripts', 'Raw_Sequence_Data/MultiQC_Reports', 'Final_Outputs']
+       def record = processed_dir.resolve('processing_scripts/workflow_run.json')
+       def source_entry = record.exists() ? new groovy.json.JsonSlurper().parseText(record.text).entry_point : params.entry_point
+       if (!(source_entry in ['raw_reads', 'trimmed_reads', 'asv_tables'])) error "Invalid source entry point: ${source_entry}"
+       def required_dirs = ['processing_scripts', 'Final_Outputs']
+       if (source_entry == 'raw_reads') required_dirs << 'Raw_Sequence_Data/MultiQC_Reports'
        def versions_file = processed_dir.resolve("GeneLab/software_versions${assaySuffix()}.txt")
        def missing = required_dirs.findAll { !processed_dir.resolve(it).isDirectory() }
            .collect { processed_dir.resolve(it).toString() }
@@ -77,7 +87,7 @@ workflow POST_PROCESSING {
        if (missing) error "Missing post-processing input(s): ${missing.join(', ')}. Run analysis first and use its output root and naming parameters."
 
        processing_scripts_dir = channel.value(processed_dir.resolve('processing_scripts'))
-       raw_multiqc_report_dir = channel.value(processed_dir.resolve('Raw_Sequence_Data/MultiQC_Reports'))
+       raw_multiqc_report_dir = channel.value(source_entry == 'raw_reads' ? processed_dir.resolve('Raw_Sequence_Data/MultiQC_Reports') : [])
        final_outputs_dir = channel.value(processed_dir.resolve('Final_Outputs'))
        software_versions_ch = channel.value(versions_file)
        rarefaction_depth_ch = channel
@@ -88,12 +98,12 @@ workflow POST_PROCESSING {
 
         PACKAGE_PROCESSING_INFO(processing_scripts_dir)
 
-        GENERATE_README()
+        GENERATE_README(source_entry, is_single_end_ch)
 
         // Automatic verification and validation
         VALIDATE_PROCESSING(channel.value(processed_dir), params.target_files, runsheet_ch,
                             GENERATE_README.out.readme,
-                            PACKAGE_PROCESSING_INFO.out.zip)
+                            PACKAGE_PROCESSING_INFO.out.zip, source_entry, is_single_end_ch)
 
         // Generate md5sums
           // Make sure md5sums are generated after the following processes are done since they are included in the md5sum generation:
@@ -101,10 +111,10 @@ workflow POST_PROCESSING {
                 .combine(PACKAGE_PROCESSING_INFO.out.zip)
                 .map { true }
 
-          GENERATE_MD5SUMS(channel.value(processed_dir), ch_ready)
+          GENERATE_MD5SUMS(channel.value(processed_dir), ch_ready, source_entry)
 
         // Generate file association table for curation
-        GENERATE_CURATION_TABLE(runsheet_ch, raw_multiqc_report_dir, final_outputs_dir)
+        GENERATE_CURATION_TABLE(runsheet_ch, raw_multiqc_report_dir, final_outputs_dir, source_entry, is_single_end_ch)
 
         // Write methods
         GENERATE_PROTOCOL(software_versions_ch, params.protocol_id, rarefaction_depth_ch)

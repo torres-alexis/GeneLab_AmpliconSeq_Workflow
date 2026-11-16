@@ -36,7 +36,7 @@ workflow STAGE_INPUTS {
     runsheet_ch = STAGE_METADATA.out.filter { kind, f -> kind == 'runsheet' }.map { kind, f -> f }
     isa_ch = STAGE_METADATA.out.filter { kind, f -> kind == 'isa' }.map { kind, f -> f }
     primers_ch = STAGE_ANALYSIS.out.primers.map { primers ->
-        if (!enabled(params.stage_only) && enabled(params.trim_primers) && (!primers[0] || !primers[1])) {
+        if (!enabled(params.stage_only) && params.entry_point == 'raw_reads' && enabled(params.trim_primers) && (!primers[0] || !primers[1])) {
             error 'Primer removal requires forward and reverse primers in the runsheet or --F_primer and --R_primer'
         }
         primers
@@ -44,10 +44,17 @@ workflow STAGE_INPUTS {
     source_runsheet_ch = STAGE_METADATA.out.filter { kind, f -> kind == 'source' }.map { kind, f -> f }
     ch_published = pub(runsheet_ch.mix(isa_ch), 'Metadata')
         .mix(pub(source_runsheet_ch, 'Metadata/source'))
-    ch_published = ch_published.mix(pub(STAGE_ANALYSIS.out.staged_reads.map { id, reads, paired -> reads }, 'Raw_Sequence_Data'))
+    if (params.entry_point == 'asv_tables') {
+        ch_published = ch_published.mix(pub(STAGE_ANALYSIS.out.counts.mix(STAGE_ANALYSIS.out.taxonomy), 'Final_Outputs'))
+    } else {
+        def reads_dir = params.entry_point == 'trimmed_reads' ? 'Trimmed_Sequence_Data' : 'Raw_Sequence_Data'
+        ch_published = ch_published.mix(pub(STAGE_ANALYSIS.out.staged_reads.map { id, reads, paired -> reads }, reads_dir))
+    }
     emit:
     published = ch_published
     staged_reads = STAGE_ANALYSIS.out.staged_reads
+    counts = STAGE_ANALYSIS.out.counts
+    taxonomy = STAGE_ANALYSIS.out.taxonomy
     runsheet = runsheet_ch
     isa_archive = isa_ch
     source_runsheet = source_runsheet_ch

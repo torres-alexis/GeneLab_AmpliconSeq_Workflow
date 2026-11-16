@@ -17,6 +17,7 @@ parser = argparse.ArgumentParser(description = "This program generates the file-
                                                has been run successfully.")
 required = parser.add_argument_group('required arguments')
 required.add_argument("-g", "--GLDS-ID", help = 'GLDS ID (e.g. "GLDS-276")', action = "store", required = True)
+parser.add_argument("--entry-point", choices=["raw_reads", "trimmed_reads", "asv_tables"], default="raw_reads")
 parser.add_argument("--GL-file", 
                     help = 'A 3-column (single-end) or 4-column (paired-end) input file (sample_id, forward, [reverse,] paired) used to run the processing pipeline. This is the GLfile.csv in the GeneLab directory if --GLDS_accession was used as input. ', 
                     action = "store", default = "")
@@ -535,6 +536,9 @@ def main():
                              include_raw_fastq, include_raw_multiqc_in_output, read_count_unit = "read")
     
 
+    if args.entry_point == 'asv_tables':
+        association_df.drop(columns=["Parameter Value[Filtered Sequence Data]",
+                                     "Parameter Value[Filtered Sequence Data/MultiQC Reports]"], inplace=True)
     write_association_table(outfile, association_df, args.primers_already_trimmed)
 
 

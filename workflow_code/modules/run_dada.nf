@@ -13,6 +13,7 @@ process RUN_DADA2 {
         path(reads)
         path(trimmed_read_counts) // empty list when primer trimming is disabled
         path(database)
+        val(input_stage)
     output:
         path("*_filtered.fastq.gz"),                                               emit: reads
         path({ "${cleanedPrefix()}filtered-read-counts${assaySuffix()}.tsv" }), emit: filtered_count
@@ -24,10 +25,11 @@ process RUN_DADA2 {
         path({ "${cleanedPrefix()}taxonomy-and-counts${assaySuffix()}.tsv" }),  emit: taxonomy_count
         path("versions.txt"),                                                      emit: version
     script:
-        def input_dir     = enabled(params.trim_primers) ? "Trimmed_Sequence_Data/" : "raw_reads/"
-        def trimmed_count = enabled(params.trim_primers) ? "${trimmed_read_counts}" : ""
+        def trimmed_here = params.entry_point == 'raw_reads' && enabled(params.trim_primers)
+        def input_dir     = input_stage == "trimmed" ? "Trimmed_Sequence_Data/" : "raw_reads/"
+        def trimmed_count = trimmed_here ? "${trimmed_read_counts}" : ""
         
-        def starting_reads_suffix = enabled(params.trim_primers) ? "trimmed" : "raw"
+        def starting_reads_suffix = input_stage
         def R1_suffix     = "${assaySuffix()}_R1_${starting_reads_suffix}.fastq.gz"   
         def R2_suffix     = "${assaySuffix()}_R2_${starting_reads_suffix}.fastq.gz"
         def single_end_suffix = isPaired == "false" ? (
@@ -57,7 +59,7 @@ process RUN_DADA2 {
                 "${params.right_trunc}" \\
                 "${params.left_maxEE}" \\
                 "${params.right_maxEE}" \\
-                "${enabled(params.trim_primers) ? 'TRUE' : 'FALSE'}" \\
+                "${trimmed_here ? 'TRUE' : 'FALSE'}" \\
                 ${sample_IDs_file} \\
                 "${input_dir}" \\
                 "${R1_suffix}" \\
@@ -73,7 +75,7 @@ process RUN_DADA2 {
             Illumina-SE-R-processing.R \\
                 "${params.left_trunc}" \\
                 "${params.left_maxEE}" \\
-                "${enabled(params.trim_primers) ? 'TRUE' : 'FALSE'}" \\
+                "${trimmed_here ? 'TRUE' : 'FALSE'}" \\
                 ${sample_IDs_file} \\
                 "${input_dir}" \\
                 "${single_end_suffix}" \\

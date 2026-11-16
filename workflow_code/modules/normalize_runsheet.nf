@@ -11,6 +11,6 @@ process NORMALIZE_RUNSHEET {
     """
     normalize_runsheet.py --input ${shellQuote(runsheet)} --output ${shellQuote(runsheet.toString().tokenize('/').last())} \\
         --base-dir ${shellQuote(base_dir)} --sample-column ${shellQuote(params.samples_column)} \\
-        --group-column ${shellQuote(params.group)} --limit ${params.limit_samples_to ?: 0} ${force}
+        --group-column ${shellQuote(params.group)} --entry-point ${shellQuote(params.entry_point)} --limit ${params.limit_samples_to ?: 0} ${force}
     """
 }
