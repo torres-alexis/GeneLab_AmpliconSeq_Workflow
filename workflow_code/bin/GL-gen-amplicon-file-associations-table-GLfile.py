@@ -19,7 +19,7 @@ required = parser.add_argument_group('required arguments')
 required.add_argument("-g", "--GLDS-ID", help = 'GLDS ID (e.g. "GLDS-276")', action = "store", required = True)
 parser.add_argument("--entry-point", choices=["raw_reads", "trimmed_reads", "asv_tables"], default="raw_reads")
 parser.add_argument("--GL-file", 
-                    help = 'A 3-column (single-end) or 4-column (paired-end) input file (sample_id, forward, [reverse,] paired) used to run the processing pipeline. This is the GLfile.csv in the GeneLab directory if --GLDS_accession was used as input. ', 
+                    help = 'The normalized Amplicon runsheet published in Metadata/.',
                     action = "store", default = "")
 parser.add_argument("--runsheet",
                     help = """
@@ -169,7 +169,7 @@ def get_read_counts_from_raw_multiqc(mapping_tab, raw_multiqc_stats_file_path,
         return(df)
 
     else:
-        input_zip = os.path.join(raw_multiqc_dir, output_prefix + raw_multiqc_zip)
+        input_zip = os.path.join(raw_multiqc_dir, raw_multiqc_zip)
         zip_file = zipfile.ZipFile(input_zip)
         #df = pd.read_csv(zip_file.open(raw_multiqc_stats_file_path), sep = "\t", usecols = [0,6])
         df = pd.read_csv(zip_file.open(raw_multiqc_stats_file_path), sep = "\t")
@@ -337,7 +337,7 @@ def runsheet_to_dict(runsheet):
         basename  = os.path.basename(string)
         index     = basename.rfind("_")
         return(basename[0:index])
-    df                    = pd.read_csv(runsheet, usecols=["sample_id", "forward"])
+    df                    = pd.read_csv(runsheet, usecols=["sample_id", "forward"], dtype={"sample_id": str})
     df['forward']         = df.forward.apply(lambda row : get_prefix(row))
     sample_to_prefix_dict = {k:v['forward'] for k,v in df.set_index("sample_id").T.to_dict().items()}
     return(sample_to_prefix_dict)
@@ -473,7 +473,7 @@ def main():
     output_prefix = str(args.output_prefix)
 
     if args.map:
-        map_tab = pd.read_csv(args.map, sep = "\t", names = ["sample", "prefix"])
+        map_tab = pd.read_csv(args.map, sep = "\t", names = ["sample", "prefix"], dtype={"sample": str})
         map_tab.set_index("sample", inplace = True)
     else:
         map_tab = None
@@ -499,7 +499,7 @@ def main():
     check_for_file_and_contents(args.GL_file)
 
     #Read GLfile into dataframe and set sample names and unique prefixes
-    GL_file = pd.read_csv(args.GL_file, sep = ",")
+    GL_file = pd.read_csv(args.GL_file, sep = ",", dtype={"sample_id": str})
     sample_names = unique_filename_prefixes = GL_file["sample_id"].tolist()
 
     sample_file_dict = dict(zip(unique_filename_prefixes, sample_names))
@@ -516,10 +516,10 @@ def main():
     filtered_multiqc_html = f"filtered_multiqc{assay_suffix}.html"
     if include_raw_multiqc_in_output:
         raw_multiqc_html = f"raw_multiqc{assay_suffix}.html"
-        multiqc = [file_prefix + output_prefix + raw_multiqc_html + "," + file_prefix + output_prefix + raw_multiqc_zip, 
-                  file_prefix + output_prefix + filtered_multiqc_html + "," + file_prefix + output_prefix + filtered_multiqc_zip]
+        multiqc = [file_prefix + raw_multiqc_html + "," + file_prefix + raw_multiqc_zip,
+                  file_prefix + filtered_multiqc_html + "," + file_prefix + filtered_multiqc_zip]
     else:
-        multiqc = file_prefix + output_prefix + filtered_multiqc_html + "," + file_prefix + output_prefix + filtered_multiqc_zip
+        multiqc = file_prefix + filtered_multiqc_html + "," + file_prefix + filtered_multiqc_zip
     
     # Retrieve a dictionary with sample names as keys and raw fastqfile prefix as values 
     sample_raw_prefix_dict = runsheet_to_dict(args.runsheet) if args.runsheet != "" else ""

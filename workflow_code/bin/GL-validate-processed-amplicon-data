@@ -17,9 +17,7 @@ parser = argparse.ArgumentParser(description = "This program validates a GeneLab
 required = parser.add_argument_group('required arguments')
 
 required.add_argument("-g", "--GLDS-ID", help = 'GLDS ID (e.g. "GLDS-276")', action = "store", required = True)
-required.add_argument("-r", "--runsheet", help = "A 3-column (single-end) or 4-column (paired-end) input file (sample_id, forward, [reverse,] paired) used to run the processing pipeline. \
-                        This is the value set to the parameter --csv_file when run the processing pipeline with a csv file as input \
-                        otherwise it is the GLfile.csv in the GeneLab directory if --GLDS_accession was used as input.", action = "store", required = True)
+required.add_argument("-r", "--runsheet", help = "The normalized Amplicon runsheet published in Metadata/.", action = "store", required = True)
 required.add_argument("--outdir", 
                       help="Directory of generated output files to be validated.", action="store", required=True)
 parser.add_argument("--entry-point", choices=["raw_reads", "trimmed_reads", "asv_tables"], default="raw_reads")
@@ -264,7 +262,11 @@ def check_amplicon_final_outputs(validation_log, final_outputs_dir, expected_fin
     # Checking all desired output types exist
     for entry in expected_final_outputs_or_suffixes:
 
-        if not any(output_file.endswith(entry) for output_file in output_files_present):
+        if entry in (".fasta", ".biom.zip"):
+            found = any(output_file.endswith(entry) for output_file in output_files_present)
+        else:
+            found = entry in output_files_present
+        if not found:
             report_failure(validation_log, "An output file named or ending with '" + str(entry) + \
                            "' was expected but not found in " + str(final_outputs_dir) + ".")
 
@@ -463,8 +465,8 @@ def main():
     
     # filename definitions and paths
     processing_zip_file = str(args.processing_zip_file)
-    raw_multiqc_zip = str(output_prefix) + f"raw_multiqc{assay_suffix}_data.zip"
-    filtered_multiqc_zip = str(output_prefix) + f"filtered_multiqc{assay_suffix}_data.zip"
+    raw_multiqc_zip = f"raw_multiqc{assay_suffix}_data.zip"
+    filtered_multiqc_zip = f"filtered_multiqc{assay_suffix}_data.zip"
     raw_multiqc_stats_file_path = f"raw_multiqc{assay_suffix}_data/multiqc_general_stats.txt"
     filtered_multiqc_stats_file_path = f"filtered_multiqc{assay_suffix}_data/multiqc_general_stats.txt"
     contrasts_file = f"{differential_abundance_dir}/" + str(output_prefix) + f"contrasts{assay_suffix}.csv"

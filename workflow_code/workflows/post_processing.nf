@@ -113,12 +113,8 @@ workflow POST_PROCESSING {
                             PACKAGE_PROCESSING_INFO.out.zip, source_entry, is_single_end_ch)
 
         // Generate md5sums
-          // Make sure md5sums are generated after the following processes are done since they are included in the md5sum generation:
-          ch_ready = GENERATE_README.out.readme
-                .combine(PACKAGE_PROCESSING_INFO.out.zip)
-                .map { true }
-
-          GENERATE_MD5SUMS(channel.value(processed_dir), ch_ready, source_entry)
+        GENERATE_MD5SUMS(channel.value(processed_dir), GENERATE_README.out.readme,
+                        PACKAGE_PROCESSING_INFO.out.zip, source_entry)
 
         // Generate file association table for curation
         GENERATE_CURATION_TABLE(runsheet_ch, raw_multiqc_report_dir, final_outputs_dir, source_entry, is_single_end_ch)

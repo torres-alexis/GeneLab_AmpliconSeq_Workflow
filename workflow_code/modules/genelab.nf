@@ -18,6 +18,7 @@ process CAPTURE_PROCESSING_RECORDS {
 }
 
 process PACKAGE_PROCESSING_INFO {
+    cache false
 
     tag "Purging file paths and zipping processing info"
 
@@ -27,7 +28,8 @@ process PACKAGE_PROCESSING_INFO {
         path({ "${cleanedPrefix()}processing_info${assaySuffix()}.zip" }), emit: zip
 
     script:
-        def prefixes = [workflow.launchDir, workflow.projectDir, workflow.workDir, file(params.outdir)]
+        def prefixes = [workflow.launchDir, workflow.projectDir, workflow.workDir, file(params.outdir), params.baseDir]
+            .findAll { it != null }
             .collect { it.toString() }.findAll { it.startsWith('/') && it != '/' }
             .unique().collect { "--prefix ${shellQuote(it)}" }.join(' ')
         """
@@ -38,7 +40,7 @@ process PACKAGE_PROCESSING_INFO {
         clean_processing_paths.py processing_info/ ${prefixes}
         
         # Purge file paths and then zip
-        zip -r ${cleanedPrefix()}processing_info${assaySuffix()}.zip processing_info/
+        zip -r ${shellQuote("${cleanedPrefix()}processing_info${assaySuffix()}.zip")} processing_info/
         """
 } 
 
@@ -61,11 +63,12 @@ process GENERATE_README {
         def force_single_end = params.force_single_end ? "--force-single-end ${params.force_single_end}" : ""
         """    
         GL-gen-processed-data-amplicon-readme-updated.py \\
-             --output '${cleanedPrefix()}README${assaySuffix()}.txt' \\
+             --output ${shellQuote("${cleanedPrefix()}README${assaySuffix()}.txt")} \\
+             --output-prefix ${shellQuote(cleanedPrefix())} \\
              --entry-point ${entry_point} \\
              --osd-id '${params.OSD_accession}' \\
-             --name '${params.name}' \\
-             --email '${params.email}' \\
+             --name ${shellQuote(params.name)} \\
+             --email ${shellQuote(params.email)} \\
              --protocol-ID '${params.protocol_id}' \\
              --assay_suffix '${assaySuffix()}' \\
              ${force_single_end} \\
@@ -76,6 +79,7 @@ process GENERATE_README {
 
 
 process VALIDATE_PROCESSING {
+    cache false
 
     tag "Running automated validation and verification...."
 
@@ -98,13 +102,13 @@ process VALIDATE_PROCESSING {
         def force_single_end = params.force_single_end ? "--force-single-end ${params.force_single_end}" : ""
         """
         GL-validate-processed-amplicon-data \\
-             --output '${params.GLDS_accession}_${cleanedPrefix()}amplicon-validation${assaySuffix()}.log' \\
+             --output ${shellQuote("${params.GLDS_accession}_${cleanedPrefix()}amplicon-validation${assaySuffix()}.log")} \\
              --entry-point ${entry_point} \\
              --GLDS-ID '${params.GLDS_accession}' \\
-             --runsheet '${runsheet}' \\
-             --outdir '${processed_dir}' \\
+             --runsheet ${shellQuote(runsheet)} \\
+             --outdir ${shellQuote(processed_dir)} \\
              --V_V_guidelines_link '${params.V_V_guidelines_link}' \\
-             --output-prefix '${cleanedPrefix()}' \\
+             --output-prefix ${shellQuote(cleanedPrefix())} \\
              --zip_targets '${target_files}' \\
              --assay_suffix '${assaySuffix()}' \\
              --raw_suffix "${assaySuffix()}_raw.fastq.gz" \\
@@ -116,14 +120,15 @@ process VALIDATE_PROCESSING {
              --filtered_suffix "${assaySuffix()}_filtered.fastq.gz" \\
              --filtered_R1_suffix "${assaySuffix()}_R1_filtered.fastq.gz" \\
              --filtered_R2_suffix "${assaySuffix()}_R2_filtered.fastq.gz" \\
-             --processing_zip_file '${processing_info}' \\
-             --readme '${README}' \\
+             --processing_zip_file ${shellQuote(processing_info)} \\
+             --readme ${shellQuote(README)} \\
              ${raw_fastq} ${primers_flag} ${single_end_flag} ${force_single_end}
         """
 }
 
 
 process GENERATE_CURATION_TABLE {
+    cache false
 
     beforeScript "chmod +x ${projectDir}/bin/*"
     tag "Generating a file association table for curation..."
@@ -146,11 +151,11 @@ process GENERATE_CURATION_TABLE {
         def include_raw_multiqc_flag = (entry_point == 'raw_reads' && enabled(params.include_raw_multiqc)) ? "--include-raw-multiqc-in-output" : ""
         """
 
-        GL-gen-amplicon-file-associations-table-GLfile.py --GL-file ${input_table} \\
-                    --output '${params.GLDS_accession}_${cleanedPrefix()}associated-file-names${assaySuffix()}.tsv' \\
+        GL-gen-amplicon-file-associations-table-GLfile.py --GL-file ${shellQuote(input_table)} \\
+                    --output ${shellQuote("${params.GLDS_accession}_${cleanedPrefix()}associated-file-names${assaySuffix()}.tsv")} \\
                     --entry-point ${entry_point} \\
                     --GLDS-ID  '${params.GLDS_accession}' \\
-                    --output-prefix '${cleanedPrefix()}' \\
+                    --output-prefix ${shellQuote(cleanedPrefix())} \\
                     --assay_suffix '${assaySuffix()}' \\
                     --raw_suffix '${assaySuffix()}_raw.fastq.gz' \\
                     --raw_R1_suffix '${assaySuffix()}_R1_raw.fastq.gz' \\
@@ -168,13 +173,15 @@ process GENERATE_CURATION_TABLE {
 
 
 process GENERATE_MD5SUMS {
+    cache false
     
     beforeScript "chmod +x ${projectDir}/bin/*"
     tag "Generating md5sums for the files to be released on OSDR..."
  
     input:
         val(processed_dir)
-        val(done_token)
+        path(readme)
+        path(processing_info)
         val(entry_point)
 
     output:
@@ -184,12 +191,13 @@ process GENERATE_MD5SUMS {
         def raw_md5_flag = (!params.force_single_end && (entry_point == 'raw_reads' && enabled(params.include_raw_data))) ? "--generate_raw_md5sums" : ""
         def primers_flag = (entry_point == 'raw_reads' && enabled(params.trim_primers)) ? "" : "--primers_already_trimmed"
         """
-        generate_md5sums.py --outdir ${processed_dir} --assay_suffix '${assaySuffix()}' --output_prefix '${cleanedPrefix()}' ${raw_md5_flag} ${primers_flag}
+        generate_md5sums.py --outdir ${shellQuote(processed_dir)} --readme ${shellQuote(readme)} --processing_info ${shellQuote(processing_info)} --assay_suffix '${assaySuffix()}' --output_prefix ${shellQuote(cleanedPrefix())} ${raw_md5_flag} ${primers_flag}
         """
 }
 
 
 process GENERATE_PROTOCOL {
+    cache 'deep'
 
     beforeScript "chmod +x ${projectDir}/bin/*"
     tag "Generating your analysis protocol..."
