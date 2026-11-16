@@ -18,6 +18,7 @@ parser = argparse.ArgumentParser(
 required = parser.add_argument_group('required arguments')
 required.add_argument("--osd-id", help='OSDR osd_id ID (e.g. "OSD-69")', action="store", required=True)
 
+parser.add_argument("--output-prefix", default="", help="Prefix applied to processed result filenames")
 parser.add_argument("--entry-point", choices=["raw_reads", "trimmed_reads", "asv_tables"], default="raw_reads")
 parser.add_argument("--output", "--output-name", default="README",
                     help='Name of output file (default: "README")')
@@ -189,7 +190,7 @@ def add_spacer(output):
 
 
 def write_amplicon_body(output):
-    longest_filename = f"richness_and_diversity_estimates_by_sample{assay_suffix}.png"
+    longest_filename = f"{args.output_prefix}richness_and_diversity_estimates_by_sample{assay_suffix}.png"
     # length of padding is the length of the longest file + the indent_level + some extra
     pad = len(longest_filename) + (4 * 4) + 2
 
@@ -221,8 +222,8 @@ def write_amplicon_body(output):
     if not args.primers_already_trimmed:
         
         add_level(trimmed_reads_dir, "trimmed fastq files", pad, output, continues=[True])
-        add_level(f"cutadapt{assay_suffix}.log", "log file of standard output and error from cutadapt", pad, output, continues=[True, True])
-        add_level(f"trimmed-read-counts{assay_suffix}.tsv", "per sample read counts before and after trimming", pad, output, continues=[True, True])
+        add_level(f"{args.output_prefix}cutadapt{assay_suffix}.log", "log file of standard output and error from cutadapt", pad, output, continues=[True, True])
+        add_level(f"{args.output_prefix}trimmed-read-counts{assay_suffix}.tsv", "per sample read counts before and after trimming", pad, output, continues=[True, True])
         # Trimmed Sequence Data
         if args.single_end:
             if args.force_single_end == "R1":
@@ -240,7 +241,7 @@ def write_amplicon_body(output):
     if args.entry_point != 'asv_tables':
         # quality-filtered reads
         add_level(filtered_reads_dir, "quality-filtered fastq files", pad, output, continues=[True])
-        add_level(f"filtered-read-counts{assay_suffix}.tsv", "per sample read counts before and after quality-filtering", pad, output, continues=[True, True])
+        add_level(f"{args.output_prefix}filtered-read-counts{assay_suffix}.tsv", "per sample read counts before and after quality-filtering", pad, output, continues=[True, True])
         # Filtered Sequence Data
         if args.single_end:
             if args.force_single_end == "R1":
@@ -263,67 +264,64 @@ def write_amplicon_body(output):
     # final outputs
     add_level(tax_asv_outputs_dir, "", pad, output, continues=[True])
     if args.entry_point != 'asv_tables':
-        add_level(f"ASVs{assay_suffix}.fasta", "fasta file of recovered sequences", pad, output, continues=[True, True])
-    add_level(f"counts{assay_suffix}.tsv", "count table of sequences across samples", pad, output, continues=[True, True])
-    add_level(f"taxonomy{assay_suffix}.tsv", "assigned taxonomy of recovered sequences", pad, output, continues=[True, True])
+        add_level(f"{args.output_prefix}ASVs{assay_suffix}.fasta", "fasta file of recovered sequences", pad, output, continues=[True, True])
+    add_level(f"{args.output_prefix}counts{assay_suffix}.tsv", "count table of sequences across samples", pad, output, continues=[True, True])
+    add_level(f"{args.output_prefix}taxonomy{assay_suffix}.tsv", "assigned taxonomy of recovered sequences", pad, output, continues=[True, True])
     if args.entry_point != 'asv_tables':
-        add_level(f"taxonomy-and-counts{assay_suffix}.tsv", "combined table of counts and taxonomy", pad, output, continues=[True, True])
-    if args.entry_point != 'asv_tables':
-        add_level(f"taxonomy-and-counts{assay_suffix}.biom.zip", "biom-formatted output of counts and taxonomy", pad, output, continues=[True, True])
-    if args.entry_point != 'asv_tables':
-        add_level(f"read-count-tracking{assay_suffix}.tsv", "read counts at each processing step", pad, output, continues=[True, False], is_last=True)
+        add_level(f"{args.output_prefix}taxonomy-and-counts{assay_suffix}.tsv", "combined table of counts and taxonomy", pad, output, continues=[True, True])
+        add_level(f"{args.output_prefix}taxonomy-and-counts{assay_suffix}.biom.zip", "biom-formatted output of counts and taxonomy", pad, output, continues=[True, True])
+        add_level(f"{args.output_prefix}read-count-tracking{assay_suffix}.tsv", "read counts at each processing step", pad, output, continues=[True, False], is_last=True)
 
     add_spacer(output)
 
     # Alpha diversity Reports
     add_level(a_diversity_dir, "alpha diversity measurements and plots using observed features estimates and Shannon diversity indices", pad, output, continues=[True])
-    add_level(f"alpha_diversity_plots{assay_suffix}.zip", "", pad, output, continues=[True, True])
-                            ### How to represent failure files? ###
-    add_level(f"statistics_table{assay_suffix}.csv", "", pad, output, continues=[True, True])
-    add_level(f"summary_table{assay_suffix}.csv", "", pad, output, continues=[True, True], is_last=True)
+    add_level(f"{args.output_prefix}alpha_diversity_plots{assay_suffix}.zip", "", pad, output, continues=[True, True])
+    add_level(f"{args.output_prefix}statistics_table{assay_suffix}.csv", "", pad, output, continues=[True, True])
+    add_level(f"{args.output_prefix}summary_table{assay_suffix}.csv", "", pad, output, continues=[True, True], is_last=True)
 
     add_spacer(output)
 
     # Beta diversity Reports
     add_level(b_diversity_dir, "", pad, output, continues=[True])
-    add_level(f"vsd_validation_plot{assay_suffix}.png", "VST transformation validation diagnostic plot", pad, output, continues=[True, True])
+    add_level(f"{args.output_prefix}vsd_validation_plot{assay_suffix}.png", "VST transformation validation diagnostic plot", pad, output, continues=[True, True])
     #Bray-Curtis results
     add_level("Bray-Curtis/", "beta diversity measurements and plots using Bray-Curtis dissimilarity", pad, output, continues=[True, True])
-    add_level(f"bray_curtis_plots{assay_suffix}.zip", "", pad, output, continues=[True, True, True]) 
-    add_level(f"bray_adonis_table{assay_suffix}.csv", "", pad, output, continues=[True, True, True])
-    add_level(f"bray_variance_table{assay_suffix}.csv", "", pad, output, continues=[True, True, True], is_last=True)
+    add_level(f"{args.output_prefix}bray_curtis_plots{assay_suffix}.zip", "", pad, output, continues=[True, True, True])
+    add_level(f"{args.output_prefix}bray_adonis_table{assay_suffix}.csv", "", pad, output, continues=[True, True, True])
+    add_level(f"{args.output_prefix}bray_variance_table{assay_suffix}.csv", "", pad, output, continues=[True, True, True], is_last=True)
     #Euclidean results
     add_level("Euclidean_distance/", "beta diversity measurements and plots using Euclidean distance", pad, output, continues=[True, False], is_last=True)
-    add_level(f"euclidean_distance_plots{assay_suffix}.zip", "", pad, output, continues=[True, False, True]) 
-    add_level(f"euclidean_adonis_table{assay_suffix}.csv", "", pad, output, continues=[True, False, True])
-    add_level(f"euclidean_variance_table{assay_suffix}.csv", "", pad, output, continues=[True, False, True], is_last=True)
+    add_level(f"{args.output_prefix}euclidean_distance_plots{assay_suffix}.zip", "", pad, output, continues=[True, False, True])
+    add_level(f"{args.output_prefix}euclidean_adonis_table{assay_suffix}.csv", "", pad, output, continues=[True, False, True])
+    add_level(f"{args.output_prefix}euclidean_variance_table{assay_suffix}.csv", "", pad, output, continues=[True, False, True], is_last=True)
 
     add_spacer(output)
 
     # Taxonomy plots
     add_level(taxonomy_plots_dir, "", pad, output, continues=[True])
-    add_level(f"sample_taxonomy_plots{assay_suffix}.zip", "relative abundance plots of taxa for each sample", pad, output, continues=[True, True])
-    add_level(f"group_taxonomy_plots{assay_suffix}.zip", "relative abundance plots of taxa for each group", pad, output, continues=[True, True], is_last=True)
+    add_level(f"{args.output_prefix}sample_taxonomy_plots{assay_suffix}.zip", "relative abundance plots of taxa for each sample", pad, output, continues=[True, True])
+    add_level(f"{args.output_prefix}group_taxonomy_plots{assay_suffix}.zip", "relative abundance plots of taxa for each group", pad, output, continues=[True, True], is_last=True)
 
     add_spacer(output)
     
     #Differential abundance
     add_level(diff_abundance_dir, "", pad, output, continues=[True])
-    add_level(f"SampleTable{assay_suffix}.csv", "table containing samples and their respective groups", pad, output, continues=[True, True])
-    add_level(f"contrasts{assay_suffix}.csv", "table specifying the group contrasts used for differential abundance analysis", pad, output, continues=[True, True])
+    add_level(f"{args.output_prefix}SampleTable{assay_suffix}.csv", "table containing samples and their respective groups", pad, output, continues=[True, True])
+    add_level(f"{args.output_prefix}contrasts{assay_suffix}.csv", "table specifying the group contrasts used for differential abundance analysis", pad, output, continues=[True, True])
     #ancombc1
     add_level(ancombc1_dir, "differential abundance analysis using ANCOMBC", pad, output, continues=[True, True])
-    add_level(f"ancombc1_differential_abundance{assay_suffix}.csv", "normalized ASV counts and differential abundance statistics for pairwise group comparisons", pad, output, continues=[True, True, True])
-    add_level(f"ancombc1_volcano_plots{assay_suffix}.zip", "volcano plots of pairwise group comparisons", pad, output, continues=[True, True, True], is_last=True)
+    add_level(f"{args.output_prefix}ancombc1_differential_abundance{assay_suffix}.csv", "normalized ASV counts and differential abundance statistics for pairwise group comparisons", pad, output, continues=[True, True, True])
+    add_level(f"{args.output_prefix}ancombc1_volcano_plots{assay_suffix}.zip", "volcano plots of pairwise group comparisons", pad, output, continues=[True, True, True], is_last=True)
     #ancombc2
     add_level(ancombc2_dir, "differential abundance analysis using ANCOM-BC2", pad, output, continues=[True, True])
-    add_level(f"ancombc2_differential_abundance{assay_suffix}.csv", "normalized ASV counts and differential abundance statistics for pairwise group comparisons", pad, output, continues=[True, True, True])
-    add_level(f"ancombc2_volcano_plots{assay_suffix}.zip", "volcano plots of pairwise group comparisons", pad, output, continues=[True, True, True], is_last=True)
+    add_level(f"{args.output_prefix}ancombc2_differential_abundance{assay_suffix}.csv", "normalized ASV counts and differential abundance statistics for pairwise group comparisons", pad, output, continues=[True, True, True])
+    add_level(f"{args.output_prefix}ancombc2_volcano_plots{assay_suffix}.zip", "volcano plots of pairwise group comparisons", pad, output, continues=[True, True, True], is_last=True)
     #deseq2
     add_level(deseq2_dir, "differential abundance analysis using DESeq2", pad, output, continues=[True, False], is_last=True)
-    add_level(f"deseq2_differential_abundance{assay_suffix}.csv", "normalized ASV counts and differential abundance statistics for pairwise group comparisons", pad, output, continues=[True, False, True])
-    add_level(f"asv_sparsity_plot{assay_suffix}.png", "diagnostic plot of ASV sparsity", pad, output, continues=[True, False, True])
-    add_level(f"deseq2_volcano_plots{assay_suffix}.zip", "volcano plots of pairwise group comparisons", pad, output, continues=[True, False, True], is_last=True)
+    add_level(f"{args.output_prefix}deseq2_differential_abundance{assay_suffix}.csv", "normalized ASV counts and differential abundance statistics for pairwise group comparisons", pad, output, continues=[True, False, True])
+    add_level(f"{args.output_prefix}asv_sparsity_plot{assay_suffix}.png", "diagnostic plot of ASV sparsity", pad, output, continues=[True, False, True])
+    add_level(f"{args.output_prefix}deseq2_volcano_plots{assay_suffix}.zip", "volcano plots of pairwise group comparisons", pad, output, continues=[True, False, True], is_last=True)
 
     add_spacer(output)
 
@@ -344,7 +342,7 @@ if args.force_single_end:
         print("WARNING: --force-single-end is set — --include-raw-reads will be ignored.")
         args.include_raw_reads = False
 
-processing_zip_file = f"processing_info{assay_suffix}.zip"
+processing_zip_file = f"{args.output_prefix}processing_info{assay_suffix}.zip"
 
 raw_reads_dir = "Raw Sequence Data/"
 trimmed_reads_dir = "Trimmed Sequence Data/"

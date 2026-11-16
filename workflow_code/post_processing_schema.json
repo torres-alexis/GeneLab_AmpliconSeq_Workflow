@@ -176,8 +176,6 @@
             "copy",
             "copyNoFollow",
             "link",
-            "move",
-            "relink",
             "symlink"
           ]
         },
@@ -196,7 +194,7 @@
           "type": "string",
           "default": "${launchDir}",
           "hidden": true,
-          "description": "Base directory used internally to construct clean file paths. Set automatically to the launch directory. Do not set this manually."
+          "description": "Base directory used to clean local paths in packaged processing records. Defaults to the post-processing launch directory."
         },
         "stage_only": {
           "type": "boolean",
