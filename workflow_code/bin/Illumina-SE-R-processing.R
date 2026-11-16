@@ -56,7 +56,7 @@ options(timeout=3600)
 read_sample_names <- function(sample_file) {
     # Try to read as CSV first
     tryCatch({
-        data <- read.csv(sample_file, stringsAsFactors = FALSE)
+        data <- read.csv(sample_file, stringsAsFactors = FALSE, colClasses = "character", check.names = FALSE)
         
         # Check for various possible sample ID column names
         sample_col <- NULL
@@ -140,9 +140,9 @@ samples_in_seqtab <- rownames(seqtab.nochim)
 
 if ( GL_trimmed_primers ) {
     
-    raw_and_trimmed_read_counts <- read.table(paste0(input_reads_dir, output_prefix, "trimmed-read-counts", assay_suffix, ".tsv"), header=T, sep="\t")
+    raw_and_trimmed_read_counts <- read.table(paste0(input_reads_dir, output_prefix, "trimmed-read-counts", assay_suffix, ".tsv"), header=T, sep="\t", colClasses=c(sample="character"))
     # reading in filtered read counts
-    filtered_read_counts <- read.table(paste0(output_prefix, "filtered-read-counts", assay_suffix, ".tsv"), header=T, sep="\t")
+    filtered_read_counts <- read.table(paste0(output_prefix, "filtered-read-counts", assay_suffix, ".tsv"), header=T, sep="\t", colClasses=c(sample="character"))
 
     # merge by sample name to ensure correct alignment
     merged_counts <- merge(raw_and_trimmed_read_counts, filtered_read_counts[,c("sample", "dada2_filtered")], by="sample")

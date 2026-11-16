@@ -419,7 +419,7 @@ if(!dir.exists(taxonomy_plots_out_dir)) dir.create(taxonomy_plots_out_dir)
 
 
 # Read in processed data
-metadata <- read_csv(file = metadata_file) %>% as.data.frame()
+metadata <- read_csv(file = metadata_file, col_types = setNames(list(col_character()), sample_colname)) %>% as.data.frame()
 row.names(metadata) <- metadata[[sample_colname]]
 metadata[,sample_colname] <- NULL
 group_column_values <- metadata %>% pull(!!sym(groups_colname))

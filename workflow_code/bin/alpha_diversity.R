@@ -246,7 +246,7 @@ if(!dir.exists(alpha_diversity_out_dir)) dir.create(alpha_diversity_out_dir)
 
 
 # Read in processed data
-metadata <- read_csv(file = metadata_file) %>% 
+metadata <- read_csv(file = metadata_file, col_types = setNames(list(col_character()), sample_colname)) %>%
                  # Replace "-" with "_" in group names
                  mutate(!!groups_colname := str_replace_all(!!sym(groups_colname),
                                                            "-", "_" ) ) %>%

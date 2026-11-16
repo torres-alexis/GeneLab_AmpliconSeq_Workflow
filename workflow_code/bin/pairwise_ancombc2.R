@@ -388,7 +388,7 @@ diff_abund_out_dir <- glue("{out_dir}ancombc2/")
 if(!dir.exists(diff_abund_out_dir)) dir.create(diff_abund_out_dir, recursive = TRUE)
 
 # ------------------------ Read metadata ---------------------------------- #
-metadata <- read_csv(metadata_file)  %>% as.data.frame()
+metadata <- read_csv(metadata_file, col_types = setNames(list(col_character()), samples_column))  %>% as.data.frame()
 rownames(metadata) <- metadata[[samples_column]]
 
 # Write out Sample Table
