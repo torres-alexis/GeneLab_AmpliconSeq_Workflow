@@ -130,10 +130,33 @@ workflow STAGE_ANALYSIS {
 
             reads_ch = input_file
                 .splitCsv(header: true)
-                .map { row ->
-                    row.paired.trim().toLowerCase() == 'true'
-                        ? tuple("${row.sample_id}", [file("${row.forward}"), file("${row.reverse}")], "true")
-                        : tuple("${row.sample_id}", [file("${row.forward}")], "false")
+                .toList()
+                .flatMap { rows ->
+                    if (!rows) error('Upload runsheet contains no samples')
+                    def required = ['sample_id', 'forward', 'paired', params.group ?: 'groups']
+                    def missing = required.findAll { !rows[0].containsKey(it) }
+                    if (missing) error("Upload runsheet is missing columns: ${missing.join(', ')}")
+                    def sampleIds = [] as Set
+                    def layout = null
+                    rows.collect { row ->
+                        def id = row.sample_id
+                        if (!id?.trim()) error('Upload runsheet contains an empty sample_id')
+                        if (!sampleIds.add(id)) error("Upload runsheet contains duplicate sample_id: ${id}")
+                        def paired = row.paired?.trim()?.toLowerCase()
+                        if (!(paired in ['true', 'false'])) {
+                            error("Upload runsheet paired value for ${id} must be true or false")
+                        }
+                        if (layout != null && paired != layout) {
+                            error('Upload runsheet must use one read layout per run')
+                        }
+                        layout = paired
+                        if (!row.forward?.trim()) error("Upload runsheet is missing a forward read for ${id}")
+                        if (paired == 'true' && !row.reverse?.trim()) {
+                            error("Upload runsheet is missing a reverse read for ${id}")
+                        }
+                        def reads = paired == 'true' ? [file(row.forward), file(row.reverse)] : [file(row.forward)]
+                        tuple(id, reads, paired)
+                    }
                 }
 
             COPY_READS( reads_ch )

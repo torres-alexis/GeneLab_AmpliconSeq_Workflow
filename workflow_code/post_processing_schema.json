@@ -19,7 +19,8 @@
         },
         "runsheet": {
           "type": "string",
-          "description": "Path to the runsheet CSV used to execute the main processing workflow. For accession-based runs this is the GLfile.csv found in the Metadata/ output directory. For local input runs this is the CSV file passed to --input_file in the main workflow."
+          "format": "file-path",
+          "description": "Path to the Amplicon 4/5-column upload CSV (GLfile.csv for accession post-processing)."
         },
         "GLDS_accession": {
           "type": "string",
@@ -138,7 +139,10 @@
         "force_single_end": {
           "type": "string",
           "description": "Force single-end mode by specifying which read was used during processing. Passes --force-single-end followed by the specified read to the README and protocol generators, and file associations table and validation processes. When set, --include_raw_data and --include_raw_multiqc are ignored regardless of their values.",
-          "enum": ["R1", "R2"],
+          "enum": [
+            "R1",
+            "R2"
+          ],
           "errorMessage": "force_single_end must be either 'R1' or 'R2'"
         },
         "include_raw_data": {
@@ -189,6 +193,34 @@
           "default": "${launchDir}",
           "hidden": true,
           "description": "Base directory used internally to construct clean file paths. Set automatically to the launch directory. Do not set this manually."
+        },
+        "stage_only": {
+          "type": "boolean",
+          "default": false,
+          "description": "Publish metadata and raw reads only; no QC, reference download or analysis."
+        },
+        "post_processing": {
+          "type": "boolean",
+          "default": false,
+          "description": "Run post-processing on the existing --outdir; mutually exclusive with stage_only."
+        },
+        "validate_params": {
+          "type": "boolean",
+          "default": true,
+          "description": "Validate parameters against the selected schema."
+        },
+        "version": {
+          "type": "boolean",
+          "default": false,
+          "description": "Print workflow version and exit."
+        },
+        "entry_point": {
+          "type": "string",
+          "enum": [
+            "raw_reads"
+          ],
+          "default": "raw_reads",
+          "description": "Amplicon currently supports raw reads only."
         }
       }
     },
@@ -206,6 +238,200 @@
         "conda_dp_tools": {
           "type": "string",
           "description": "Path to an existing conda environment containing dp_tools. Used by all processes in this workflow. If not provided, an environment is created from envs/dp_tools.yaml."
+        }
+      }
+    },
+    "other_route_options": {
+      "title": "Analysis options (unused in post-processing)",
+      "type": "object",
+      "properties": {
+        "accession": {
+          "type": "string",
+          "description": "Input OSD or GLDS identifier as 'OSD-#' or 'GLDS-#' if processing an OSDR dataset.",
+          "pattern": "^(OSD|GLDS)-[0-9]+$",
+          "hidden": true
+        },
+        "input_file": {
+          "type": "string",
+          "description": "Legacy alias for --runsheet. Amplicon upload CSV columns are sample_id,forward,[reverse,]paired,groups. Upload analysis requires --F_primer and --R_primer only when --trim_primers is true; --stage_only does not require primers.",
+          "format": "file-path",
+          "hidden": true
+        },
+        "isa_archive": {
+          "type": "string",
+          "description": "Path to a local ISA archive. Requires --accession.",
+          "format": "file-path",
+          "hidden": true
+        },
+        "specify_runsheet": {
+          "type": "string",
+          "description": "Path to a specific runsheet when multiple runsheets match the same target region. '--accession' must also be used, and the specified runsheet must match the target region defined by --target_region.",
+          "format": "file-path",
+          "hidden": true
+        },
+        "database_store_path": {
+          "type": "string",
+          "default": "./Reference_DBs",
+          "description": "Directory where DECIPHER reference databases will be downloaded and stored.",
+          "hidden": true
+        },
+        "F_primer": {
+          "type": "string",
+          "description": "Forward primer sequence e.g. AGAGTTTGATCCTGGCTCAG. Required for upload analysis (--runsheet or --input_file) when --trim_primers is true. Not required for --stage_only. Automatically sourced from the GeneLab runsheet when --accession is supplied.",
+          "pattern": "^[A-Za-z]+$",
+          "errorMessage": "Forward primer sequence must contain letters only (no spaces, numbers, or special characters)",
+          "hidden": true
+        },
+        "R_primer": {
+          "type": "string",
+          "description": "Reverse primer sequence e.g. CTGCCTCCCGTAGGAGT. Required for upload analysis (--runsheet or --input_file) when --trim_primers is true. Not required for --stage_only. Automatically sourced from the GeneLab runsheet when --accession is supplied.",
+          "pattern": "^[A-Za-z]+$",
+          "errorMessage": "Reverse primer sequence must contain letters only (no spaces, numbers, or special characters)",
+          "hidden": true
+        },
+        "min_cutadapt_len": {
+          "type": "integer",
+          "default": 130,
+          "description": "Minimum read length (in bases) to retain after primer removal with Cutadapt. Reads shorter than this value are discarded.",
+          "hidden": true
+        },
+        "primers_linked": {
+          "type": "boolean",
+          "default": true,
+          "description": "Set to true if the forward and reverse primers are linked, meaning both primer sequences are expected to be present on the same read (typical for short amplicons). See https://cutadapt.readthedocs.io/en/stable/recipes.html#trimming-amplicon-primers-from-paired-end-reads.",
+          "hidden": true
+        },
+        "anchored_primers": {
+          "type": "boolean",
+          "default": true,
+          "description": "Set to true if primers are anchored, i.e. expected to appear at a fixed position at the start of reads. Anchoring improves specificity of primer detection. See https://cutadapt.readthedocs.io/en/stable/recipes.html#trimming-amplicon-primers-from-paired-end-reads.",
+          "hidden": true
+        },
+        "discard_untrimmed": {
+          "type": "boolean",
+          "default": true,
+          "description": "Set to true to discard reads in which no primer was detected. Set to false to retain untrimmed reads, for example when sequencing quality is low and some reads may lack detectable primers.",
+          "hidden": true
+        },
+        "concatenate_reads_only": {
+          "type": "boolean",
+          "default": false,
+          "description": "Set to true to concatenate forward and reverse reads instead of attempting to merge overlapping pairs in DADA2. Intended for amplicons that are too long to produce an overlapping region, such as 18S fragments captured with 515-926 primers. Note that 16S and 18S should have been separated already prior to running this workflow. This should likely be left as false for any option other than 18S above.",
+          "hidden": true
+        },
+        "rarefaction_depth": {
+          "type": "integer",
+          "default": 500,
+          "description": "Rarefaction depth (minimum read count) used for alpha and beta diversity analyses. Samples with fewer reads than this value are excluded from rarefaction-based diversity metrics.",
+          "hidden": true
+        },
+        "samples_column": {
+          "type": "string",
+          "default": "sample_id",
+          "description": "Name of the column in the input CSV file (or GeneLab runsheet) that contains unique sample identifiers. When using --accession, this is set automatically to 'Sample Name'.",
+          "hidden": true
+        },
+        "group": {
+          "type": "string",
+          "default": "groups",
+          "description": "Name of the column in the input CSV file that contains treatment group labels. This column is used to define contrasts for diversity analysis and differential abundance testing. When using --accession, this is set automatically to 'groups'.",
+          "hidden": true
+        },
+        "remove_struc_zeros": {
+          "type": "boolean",
+          "description": "Set to true to remove structural zeros (a.k.a ASVs with zero counts in all samples of at least one treatment group)",
+          "hidden": true
+        },
+        "remove_rare": {
+          "type": "boolean",
+          "description": "Set to true to filter out rare taxa and low-depth samples before diversity and differential abundance analysis. When enabled, the thresholds defined by --prevalence_cutoff and --library_cutoff are applied.",
+          "hidden": true
+        },
+        "prevalence_cutoff": {
+          "type": "number",
+          "default": 0,
+          "description": "Applies when --remove_rare is true. A decimal fraction between 0 and 1 representing the minimum proportion of samples in which a taxon must be present to be retained. For example, 0.15 retains only taxa present in at least 15% of samples. Default is 0 (no prevalence filtering).",
+          "hidden": true
+        },
+        "library_cutoff": {
+          "type": "integer",
+          "default": 0,
+          "description": "Applies when --remove_rare is true. Samples with total read counts (library sizes) below this threshold are excluded from diversity and differential abundance analysis. For example, set to 100 to discard samples with fewer than 100 reads. Default is 0 (no library size filtering).",
+          "hidden": true
+        },
+        "diff_abund_method": {
+          "type": "string",
+          "default": "all",
+          "description": "Differential abundance method(s) to run. 'ancombc1' runs ANCOMBC v1; 'ancombc2' runs ANCOMBC v2; 'deseq2' runs DESeq2; 'all' (default) runs all three methods.",
+          "enum": [
+            "all",
+            "ancombc1",
+            "ancombc2",
+            "deseq2"
+          ],
+          "hidden": true
+        },
+        "limit_samples_to": {
+          "type": "integer",
+          "description": "Use only the first n accession-derived samples.",
+          "hidden": true
+        },
+        "dp_tools_plugin": {
+          "type": "string",
+          "description": "Alternative dp_tools plugin.",
+          "hidden": true
+        },
+        "multiqc_config": {
+          "type": "string",
+          "default": "${projectDir}/conf/multiqc.config",
+          "description": "Path to a custom MultiQC configuration file. Applied to both the raw-read and filtered-read MultiQC reports. Defaults to the conf/multiqc.config file bundled with the pipeline.",
+          "hidden": true
+        },
+        "api_url": {
+          "type": "string",
+          "default": "https://visualization.osdr.nasa.gov/biodata/api/v2/dataset/*/",
+          "hidden": true
+        },
+        "errorStrategy": {
+          "type": "string",
+          "default": "terminate",
+          "description": "Nextflow error strategy applied when a process fails. See https://www.nextflow.io/docs/latest/process.html#errorstrategy.",
+          "hidden": true
+        },
+        "conda_fastqc": {
+          "type": "string",
+          "description": "Path to an existing conda environment containing fastqc.",
+          "hidden": true
+        },
+        "conda_multiqc": {
+          "type": "string",
+          "description": "Path to an existing conda environment containing multiqc",
+          "hidden": true
+        },
+        "conda_cutadapt": {
+          "type": "string",
+          "description": "Path to an existing conda environment containing cutadapt.",
+          "hidden": true
+        },
+        "conda_R": {
+          "type": "string",
+          "description": "Path to an existing conda environment containing R with the DADA2, DECIPHER, and biomformat packages installed.",
+          "hidden": true
+        },
+        "conda_diversity": {
+          "type": "string",
+          "description": "Path to an existing conda environment containing R packages required for diversity analysis and differential abundance testing (ANCOMBC and DESeq2).",
+          "hidden": true
+        },
+        "conda_zip": {
+          "type": "string",
+          "description": "Path to an existing conda environment containing zip.",
+          "hidden": true
+        },
+        "conda_wget": {
+          "type": "string",
+          "description": "Path to an existing conda environment containing wget.",
+          "hidden": true
         }
       }
     }
@@ -228,6 +454,9 @@
     },
     {
       "$ref": "#/$defs/conda_related_params"
+    },
+    {
+      "$ref": "#/$defs/other_route_options"
     }
   ]
 }

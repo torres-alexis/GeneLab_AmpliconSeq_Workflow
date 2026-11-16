@@ -1,4 +1,4 @@
-include { cleanedPrefix } from './utils.nf'
+include { enabled; cleanedPrefix; assaySuffix } from './utils.nf'
 
 process PACKAGE_PROCESSING_INFO {
 
@@ -7,7 +7,7 @@ process PACKAGE_PROCESSING_INFO {
     input:
         path(processing_scripts_dir) 
     output:
-        path({ "${cleanedPrefix()}processing_info${params.assay_suffix}.zip" }), emit: zip
+        path({ "${cleanedPrefix()}processing_info${assaySuffix()}.zip" }), emit: zip
 
     script:
         """
@@ -20,7 +20,7 @@ process PACKAGE_PROCESSING_INFO {
         find processing_info/ -type f -exec bash ./clean-paths.sh '{}' ${params.baseDir} \\;
         
         # Purge file paths and then zip
-        zip -r ${cleanedPrefix()}processing_info${params.assay_suffix}.zip processing_info/
+        zip -r ${cleanedPrefix()}processing_info${assaySuffix()}.zip processing_info/
         """
 } 
 
@@ -31,21 +31,21 @@ process GENERATE_README {
     tag "Generating README for ${params.OSD_accession}"
 
     output:
-        path({ "${cleanedPrefix()}README${params.assay_suffix}.txt" }), emit: readme
+        path({ "${cleanedPrefix()}README${assaySuffix()}.txt" }), emit: readme
 
     script:
-        def raw_reads = params.include_raw_data ? "--include-raw-reads" : ""
-        def trimmed_reads = params.trim_primers ? "" : "--primers_already_trimmed"
-        def single_end = params.single_end ? "--single-end" : ""
+        def raw_reads = enabled(params.include_raw_data) ? "--include-raw-reads" : ""
+        def trimmed_reads = enabled(params.trim_primers) ? "" : "--primers_already_trimmed"
+        def single_end = enabled(params.single_end) ? "--single-end" : ""
         def force_single_end = params.force_single_end ? "--force-single-end ${params.force_single_end}" : ""
         """    
         GL-gen-processed-data-amplicon-readme-updated.py \\
-             --output '${cleanedPrefix()}README${params.assay_suffix}.txt' \\
+             --output '${cleanedPrefix()}README${assaySuffix()}.txt' \\
              --osd-id '${params.OSD_accession}' \\
              --name '${params.name}' \\
              --email '${params.email}' \\
              --protocol-ID '${params.protocol_id}' \\
-             --assay_suffix '${params.assay_suffix}' \\
+             --assay_suffix '${assaySuffix()}' \\
              ${force_single_end} \\
              ${raw_reads} ${trimmed_reads} ${single_end}
         """
@@ -65,32 +65,32 @@ process VALIDATE_PROCESSING {
         path(processing_info)
 
     output:
-        path({ "${params.GLDS_accession}_${cleanedPrefix()}amplicon-validation${params.assay_suffix}.log" }), emit: log
+        path({ "${params.GLDS_accession}_${cleanedPrefix()}amplicon-validation${assaySuffix()}.log" }), emit: log
 
     script:
-        def raw_fastq = params.include_raw_data ? "--include-raw-fastq" : ""
-        def primers_flag = params.trim_primers ? "" : "--primers-already-trimmed"
-        def single_end_flag = params.single_end ? "--single-ended" : ""
+        def raw_fastq = enabled(params.include_raw_data) ? "--include-raw-fastq" : ""
+        def primers_flag = enabled(params.trim_primers) ? "" : "--primers-already-trimmed"
+        def single_end_flag = enabled(params.single_end) ? "--single-ended" : ""
         def force_single_end = params.force_single_end ? "--force-single-end ${params.force_single_end}" : ""
         """
         GL-validate-processed-amplicon-data \\
-             --output '${params.GLDS_accession}_${cleanedPrefix()}amplicon-validation${params.assay_suffix}.log' \\
+             --output '${params.GLDS_accession}_${cleanedPrefix()}amplicon-validation${assaySuffix()}.log' \\
              --GLDS-ID '${params.GLDS_accession}' \\
              --runsheet '${runsheet}' \\
              --outdir '${processed_dir}' \\
              --V_V_guidelines_link '${params.V_V_guidelines_link}' \\
              --output-prefix '${cleanedPrefix()}' \\
              --zip_targets '${target_files}' \\
-             --assay_suffix '${params.assay_suffix}' \\
-             --raw_suffix "${params.assay_suffix}_raw.fastq.gz" \\
-             --raw_R1_suffix "${params.assay_suffix}_R1_raw.fastq.gz" \\
-             --raw_R2_suffix "${params.assay_suffix}_R2_raw.fastq.gz" \\
-             --primer_trimmed_suffix "${params.assay_suffix}_trimmed.fastq.gz" \\
-             --primer_trimmed_R1_suffix "${params.assay_suffix}_R1_trimmed.fastq.gz" \\
-             --primer_trimmed_R2_suffix "${params.assay_suffix}_R2_trimmed.fastq.gz" \\
-             --filtered_suffix "${params.assay_suffix}_filtered.fastq.gz" \\
-             --filtered_R1_suffix "${params.assay_suffix}_R1_filtered.fastq.gz" \\
-             --filtered_R2_suffix "${params.assay_suffix}_R2_filtered.fastq.gz" \\
+             --assay_suffix '${assaySuffix()}' \\
+             --raw_suffix "${assaySuffix()}_raw.fastq.gz" \\
+             --raw_R1_suffix "${assaySuffix()}_R1_raw.fastq.gz" \\
+             --raw_R2_suffix "${assaySuffix()}_R2_raw.fastq.gz" \\
+             --primer_trimmed_suffix "${assaySuffix()}_trimmed.fastq.gz" \\
+             --primer_trimmed_R1_suffix "${assaySuffix()}_R1_trimmed.fastq.gz" \\
+             --primer_trimmed_R2_suffix "${assaySuffix()}_R2_trimmed.fastq.gz" \\
+             --filtered_suffix "${assaySuffix()}_filtered.fastq.gz" \\
+             --filtered_R1_suffix "${assaySuffix()}_R1_filtered.fastq.gz" \\
+             --filtered_R2_suffix "${assaySuffix()}_R2_filtered.fastq.gz" \\
              --processing_zip_file '${processing_info}' \\
              --readme '${README}' \\
              ${raw_fastq} ${primers_flag} ${single_end_flag} ${force_single_end}
@@ -109,30 +109,30 @@ process GENERATE_CURATION_TABLE {
         path(final_outputs_dir) // passed so the process has access to final outputs to get alpha/beta diversity, taxonomy plots, and DA outputs
 
     output:
-        path({ "${params.GLDS_accession}_${cleanedPrefix()}associated-file-names${params.assay_suffix}.tsv" }), emit: curation_table
+        path({ "${params.GLDS_accession}_${cleanedPrefix()}associated-file-names${assaySuffix()}.tsv" }), emit: curation_table
 
     script:
-        def primers_flag = params.trim_primers ? "" : "--primers-already-trimmed"
-        def single_end_flag = params.single_end ? "--single-ended" : ""
+        def primers_flag = enabled(params.trim_primers) ? "" : "--primers-already-trimmed"
+        def single_end_flag = enabled(params.single_end) ? "--single-ended" : ""
         def force_single_end = params.force_single_end ? "--force-single-end ${params.force_single_end}" : ""
-        def include_raw_fastq_flag = params.include_raw_data ? "--include-raw-fastq" : ""
-        def include_raw_multiqc_flag = params.include_raw_multiqc ? "--include-raw-multiqc-in-output" : ""        
+        def include_raw_fastq_flag = enabled(params.include_raw_data) ? "--include-raw-fastq" : ""
+        def include_raw_multiqc_flag = enabled(params.include_raw_multiqc) ? "--include-raw-multiqc-in-output" : ""
         """
 
         GL-gen-amplicon-file-associations-table-GLfile.py --GL-file ${input_table} \\
-                    --output '${params.GLDS_accession}_${cleanedPrefix()}associated-file-names${params.assay_suffix}.tsv' \\
+                    --output '${params.GLDS_accession}_${cleanedPrefix()}associated-file-names${assaySuffix()}.tsv' \\
                     --GLDS-ID  '${params.GLDS_accession}' \\
                     --output-prefix '${cleanedPrefix()}' \\
-                    --assay_suffix '${params.assay_suffix}' \\
-                    --raw_suffix '${params.assay_suffix}_raw.fastq.gz' \\
-                    --raw_R1_suffix '${params.assay_suffix}_R1_raw.fastq.gz' \\
-                    --raw_R2_suffix '${params.assay_suffix}_R2_raw.fastq.gz' \\
-                    --primer_trimmed_suffix '${params.assay_suffix}_trimmed.fastq.gz' \\
-                    --primer_trimmed_R1_suffix '${params.assay_suffix}_R1_trimmed.fastq.gz' \\
-                    --primer_trimmed_R2_suffix '${params.assay_suffix}_R2_trimmed.fastq.gz' \\
-                    --filtered_suffix '${params.assay_suffix}_filtered.fastq.gz' \\
-                    --filtered_R1_suffix '${params.assay_suffix}_R1_filtered.fastq.gz' \\
-                    --filtered_R2_suffix '${params.assay_suffix}_R2_filtered.fastq.gz' \\
+                    --assay_suffix '${assaySuffix()}' \\
+                    --raw_suffix '${assaySuffix()}_raw.fastq.gz' \\
+                    --raw_R1_suffix '${assaySuffix()}_R1_raw.fastq.gz' \\
+                    --raw_R2_suffix '${assaySuffix()}_R2_raw.fastq.gz' \\
+                    --primer_trimmed_suffix '${assaySuffix()}_trimmed.fastq.gz' \\
+                    --primer_trimmed_R1_suffix '${assaySuffix()}_R1_trimmed.fastq.gz' \\
+                    --primer_trimmed_R2_suffix '${assaySuffix()}_R2_trimmed.fastq.gz' \\
+                    --filtered_suffix '${assaySuffix()}_filtered.fastq.gz' \\
+                    --filtered_R1_suffix '${assaySuffix()}_R1_filtered.fastq.gz' \\
+                    --filtered_R2_suffix '${assaySuffix()}_R2_filtered.fastq.gz' \\
                     ${primers_flag} ${single_end_flag} ${force_single_end} ${include_raw_fastq_flag} ${include_raw_multiqc_flag}
 
         """
@@ -149,13 +149,13 @@ process GENERATE_MD5SUMS {
         val(done_token)
 
     output:
-        path({ "${cleanedPrefix()}raw_md5sum${params.assay_suffix}.tsv" }), emit: raw_md5sum, optional: true
-        path({ "${cleanedPrefix()}processed_md5sum${params.assay_suffix}.tsv" }), emit: processed_md5sum
+        path({ "${cleanedPrefix()}raw_md5sum${assaySuffix()}.tsv" }), emit: raw_md5sum, optional: true
+        path({ "${cleanedPrefix()}processed_md5sum${assaySuffix()}.tsv" }), emit: processed_md5sum
     script:
-        def raw_md5_flag = (!params.force_single_end && params.include_raw_data) ? "--generate_raw_md5sums" : ""
-        def primers_flag = params.trim_primers ? "" : "--primers_already_trimmed"
+        def raw_md5_flag = (!params.force_single_end && enabled(params.include_raw_data)) ? "--generate_raw_md5sums" : ""
+        def primers_flag = enabled(params.trim_primers) ? "" : "--primers_already_trimmed"
         """
-        generate_md5sums.py --outdir ${processed_dir} --assay_suffix '${params.assay_suffix}' --output_prefix '${cleanedPrefix()}' ${raw_md5_flag} ${primers_flag}
+        generate_md5sums.py --outdir ${processed_dir} --assay_suffix '${assaySuffix()}' --output_prefix '${cleanedPrefix()}' ${raw_md5_flag} ${primers_flag}
         """
 }
 
@@ -172,11 +172,12 @@ process GENERATE_PROTOCOL {
     output:
         path("protocol.txt"), emit: protocol
     script:
-        def trim_flag = params.trim_primers ? "--trim_primers" : ""
+        def depth_flag = rarefaction_depth ? "--rarefaction_depth_file ${rarefaction_depth}" : ""
+        def trim_flag = enabled(params.trim_primers) ? "--trim_primers" : ""
         def force_single_end_flag = params.force_single_end ? "--force_single_end ${params.force_single_end}" : ""
         """
         generate_protocol.py ${software_versions} ${protocol_id} \\
-            --rarefaction_depth_file ${rarefaction_depth} \\
+            ${depth_flag} \\
             --target_region ${params.target_region} \\
             --trunc_len "${params.left_trunc},${params.right_trunc}" \\
             --max_ee "${params.left_maxEE},${params.right_maxEE}" \\
