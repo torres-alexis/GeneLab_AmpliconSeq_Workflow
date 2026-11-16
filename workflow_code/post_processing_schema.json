@@ -257,7 +257,7 @@
         },
         "input_file": {
           "type": "string",
-          "description": "Legacy alias for --runsheet.",
+          "description": "Alias for --runsheet in the main workflow.",
           "format": "file-path",
           "hidden": true
         },
@@ -332,13 +332,13 @@
         "samples_column": {
           "type": "string",
           "default": "sample_id",
-          "description": "Name of the column in the input CSV file (or GeneLab runsheet) that contains unique sample identifiers. When using --accession, this is set automatically to 'Sample Name'.",
+          "description": "Name of the input runsheet column containing sample identifiers.",
           "hidden": true
         },
         "group": {
           "type": "string",
           "default": "groups",
-          "description": "Name of the column in the input CSV file that contains treatment group labels. This column is used to define contrasts for diversity analysis and differential abundance testing. When using --accession, this is set automatically to 'groups'.",
+          "description": "Name of the input runsheet column containing treatment group labels.",
           "hidden": true
         },
         "remove_struc_zeros": {
@@ -377,7 +377,7 @@
         },
         "limit_samples_to": {
           "type": "integer",
-          "description": "Use only the first n accession-derived samples.",
+          "description": "Process only the first N samples from the runsheet.",
           "hidden": true
         },
         "dp_tools_plugin": {
