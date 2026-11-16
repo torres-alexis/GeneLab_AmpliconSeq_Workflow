@@ -36,6 +36,10 @@ def assaySuffix() {
     return suffix
 }
 
+def processingTargets() {
+    return params.target_files ?: "command.txt,nextflow_processing_info${assaySuffix()}.txt"
+}
+
 process SOFTWARE_VERSIONS {
 
     tag "Writing out software versions..."

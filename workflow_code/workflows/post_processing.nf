@@ -1,4 +1,4 @@
-include { assaySuffix; pub; enabled } from '../modules/utils.nf'
+include { assaySuffix; processingTargets; pub; enabled } from '../modules/utils.nf'
 nextflow.enable.dsl=2
 
 
@@ -27,7 +27,7 @@ workflow POST_PROCESSING {
          Output Directory: ${params.outdir}
          Assay Suffix: ${assaySuffix()}
          Output Prefix: ${params.output_prefix}
-         Target Files: ${params.target_files}
+         Target Files: ${processingTargets()}
 
          Analyst Options:
          Analyst's Name : ${params.name}
@@ -75,8 +75,11 @@ workflow POST_PROCESSING {
        }
 
        def processed_dir = file(params.outdir)
-       def record = processed_dir.resolve('processing_scripts/workflow_run.json')
-       def source_entry = record.exists() ? new groovy.json.JsonSlurper().parseText(record.text).entry_point : params.entry_point
+       def run_record = processed_dir.resolve('processing_scripts/workflow_run.json')
+       def recorded_run = run_record.exists() ? new groovy.json.JsonSlurper().parseText(run_record.text) : [:]
+       if (recorded_run.containsKey('capture_status') && recorded_run.capture_status != 'complete')
+           error 'Processing-record capture is incomplete. Complete the main workflow before post-processing.'
+       def source_entry = recorded_run.entry_point ?: params.entry_point
        if (!(source_entry in ['raw_reads', 'trimmed_reads', 'asv_tables'])) error "Invalid source entry point: ${source_entry}"
        def required_dirs = ['processing_scripts', 'Final_Outputs']
        if (source_entry == 'raw_reads') required_dirs << 'Raw_Sequence_Data/MultiQC_Reports'
@@ -84,6 +87,10 @@ workflow POST_PROCESSING {
        def missing = required_dirs.findAll { !processed_dir.resolve(it).isDirectory() }
            .collect { processed_dir.resolve(it).toString() }
        if (!versions_file.isFile()) missing << versions_file.toString()
+       processingTargets().split(',').each { name ->
+           def record = processed_dir.resolve('processing_scripts').resolve(name.trim())
+           if (!record.exists()) missing << record.toString()
+       }
        if (missing) error "Missing post-processing input(s): ${missing.join(', ')}. Run analysis first and use its output root and naming parameters."
 
        processing_scripts_dir = channel.value(processed_dir.resolve('processing_scripts'))
@@ -101,7 +108,7 @@ workflow POST_PROCESSING {
         GENERATE_README(source_entry, is_single_end_ch)
 
         // Automatic verification and validation
-        VALIDATE_PROCESSING(channel.value(processed_dir), params.target_files, runsheet_ch,
+        VALIDATE_PROCESSING(channel.value(processed_dir), processingTargets(), runsheet_ch,
                             GENERATE_README.out.readme,
                             PACKAGE_PROCESSING_INFO.out.zip, source_entry, is_single_end_ch)
 

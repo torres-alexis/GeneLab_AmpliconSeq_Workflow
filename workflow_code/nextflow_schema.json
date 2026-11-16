@@ -69,6 +69,11 @@
                     "type": "string",
                     "format": "file-path",
                     "description": "Path to the input runsheet. Takes precedence over --input_file."
+                },
+                "execution_trace_file": {
+                    "type": "string",
+                    "description": "Execution trace used to capture processing records; must include name, status and workdir.",
+                    "hidden": true
                 }
             },
             "required": [
@@ -375,8 +380,7 @@
                 },
                 "target_files": {
                     "type": "string",
-                    "default": "command.txt,nextflow_processing_info_GLAmpSeq.txt",
-                    "description": "Comma-separated list of file names expected inside the processing_info.zip archive.",
+                    "description": "Comma-separated filenames expected inside the processing-info archive. When unset, expects command.txt and nextflow_processing_info followed by the effective assay suffix and .txt. Set explicitly when validating older processing records.",
                     "hidden": true
                 },
                 "name": {

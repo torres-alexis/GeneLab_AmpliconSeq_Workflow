@@ -1,4 +1,21 @@
-include { enabled; cleanedPrefix; assaySuffix } from './utils.nf'
+include { enabled; shellQuote; cleanedPrefix; assaySuffix } from './utils.nf'
+
+process CAPTURE_PROCESSING_RECORDS {
+    executor 'local'
+    cpus 1
+    memory '256 MB'
+    cache false
+    errorStrategy 'terminate'
+
+    input:
+        val(completed_outputs)
+        val(output_dir)
+        val(suffix)
+        val(run)
+
+    exec:
+        WorkflowProvenance.save(output_dir, suffix, run)
+}
 
 process PACKAGE_PROCESSING_INFO {
 
@@ -10,14 +27,15 @@ process PACKAGE_PROCESSING_INFO {
         path({ "${cleanedPrefix()}processing_info${assaySuffix()}.zip" }), emit: zip
 
     script:
+        def prefixes = [workflow.launchDir, workflow.projectDir, workflow.workDir, file(params.outdir)]
+            .collect { it.toString() }.findAll { it.startsWith('/') && it != '/' }
+            .unique().collect { "--prefix ${shellQuote(it)}" }.join(' ')
         """
-        cat `which clean-paths.sh` > clean-paths.sh
-        chmod +x ./clean-paths.sh
         mkdir processing_info/ && \\
-        cp ${processing_scripts_dir}/* processing_info
+        cp -R ${processing_scripts_dir}/. processing_info/
 
         echo "Purging file paths"
-        find processing_info/ -type f -exec bash ./clean-paths.sh '{}' ${params.baseDir} \\;
+        clean_processing_paths.py processing_info/ ${prefixes}
         
         # Purge file paths and then zip
         zip -r ${cleanedPrefix()}processing_info${assaySuffix()}.zip processing_info/
