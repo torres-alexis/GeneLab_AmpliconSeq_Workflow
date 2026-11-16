@@ -22,7 +22,8 @@ workflow {
         error 'Specify only one of --stage_only or --post_processing'
     }
     if (params.validate_params == null || enabled(params.validate_params)) validateParameters(parameters_schema: schema)
-    if (params.entry_point != null && params.entry_point != 'raw_reads') error 'Amplicon supports only --entry_point raw_reads'
+    if (!(params.entry_point in ['raw_reads', 'trimmed_reads', 'asv_tables'])) error 'Supported entry points: raw_reads, trimmed_reads, asv_tables'
+    if (params.entry_point == 'asv_tables' && params.truncate_to) error '--truncate_to applies only to raw or trimmed reads'
     if (enabled(params.post_processing)) {
         POST_PROCESSING()
         ch_published = POST_PROCESSING.out.published

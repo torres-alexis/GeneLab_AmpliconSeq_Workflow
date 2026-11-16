@@ -22,6 +22,7 @@ required.add_argument("-r", "--runsheet", help = "A 3-column (single-end) or 4-c
                         otherwise it is the GLfile.csv in the GeneLab directory if --GLDS_accession was used as input.", action = "store", required = True)
 required.add_argument("--outdir", 
                       help="Directory of generated output files to be validated.", action="store", required=True)
+parser.add_argument("--entry-point", choices=["raw_reads", "trimmed_reads", "asv_tables"], default="raw_reads")
 parser.add_argument("--output", 
                     help = 'Name of output log file (default: "<GLDS-ID>_<output_prefix>amplicon-validation.log", with appended prefix if one is provided)',
                     default = "", action = "store")
@@ -470,7 +471,7 @@ def main():
 
     if args.force_single_end:
         args.single_ended = True
-        if args.include_raw_fastq:
+        if args.include_raw_fastq and args.entry_point == 'raw_reads':
             print("Warning: --include-raw-fastq should not be set when --force-single-end is used. Ignoring --include-raw-fastq flag.")
             args.include_raw_fastq = False
 
@@ -552,11 +553,11 @@ def main():
                      alpha_diversity_dir, beta_diversity_dir, taxonomy_plots_dir, 
                      differential_abundance_dir, ancombc1_dir, ancombc2_dir, deseq2_dir]
 
-    if args.include_raw_fastq:
+    if args.include_raw_fastq and args.entry_point == 'raw_reads':
         expected_dirs.append(raw_reads_dir)
         expected_dirs.append(raw_multiqc_dir)
 
-    if not args.primers_already_trimmed:
+    if not args.primers_already_trimmed and args.entry_point == 'raw_reads':
         expected_dirs.append(trimmed_reads_dir)
 
     if args.output == "":
@@ -568,6 +569,10 @@ def main():
     # Initializing the log file
     setup_log(validation_log, V_V_guidelines_link)
     append_message_to_log(validation_log, f"Summary of checks:")
+
+    if args.entry_point == 'asv_tables':
+        expected_dirs = [directory for directory in expected_dirs if directory not in (filtered_reads_dir, filtered_multiqc_dir)]
+        expected_final_outputs_or_suffixes = [output_prefix + f"counts{assay_suffix}.tsv", output_prefix + f"taxonomy{assay_suffix}.tsv"]
 
     # Check if README.txt exists
     check_for_file_and_contents(validation_log, args.readme)
@@ -582,7 +587,7 @@ def main():
     # since we still want to check the raw multiqc outputs and get read count stats from it even if we aren't checking for the raw fastq files themselves.
     raw_multiqc_zip = os.path.join(raw_multiqc_dir, raw_multiqc_zip)
     raw_prefix = "raw"
-    if args.include_raw_fastq:
+    if args.include_raw_fastq and args.entry_point == 'raw_reads':
         check_fastq_files(validation_log, sample_names, raw_reads_dir, 
                           raw_suffix, raw_R1_suffix, raw_R2_suffix, args.single_ended, args.force_single_end)
         append_message_to_log(validation_log, f"    - all expected fastq read files were found in {raw_reads_dir}")
@@ -593,7 +598,7 @@ def main():
         append_message_to_log(validation_log, f"    - all expected samples were found in raw multiqc files in {raw_multiqc_dir}")
 
     # Trimmed reads
-    if not args.primers_already_trimmed:
+    if not args.primers_already_trimmed and args.entry_point == 'raw_reads':
         check_fastq_files(validation_log, sample_names, trimmed_reads_dir, 
                           primer_trimmed_suffix, primer_trimmed_R1_suffix,
                           primer_trimmed_R2_suffix, args.single_ended, args.force_single_end)
@@ -604,23 +609,24 @@ def main():
             append_message_to_log(validation_log, f"    - {file} was found in {trimmed_reads_dir}")
         append_message_to_log(validation_log, f"    - all expected files were found in {trimmed_reads_dir}")
 
-    # Filtered reads
-    check_fastq_files(validation_log, sample_names, filtered_reads_dir, 
-                      filtered_suffix, filtered_R1_suffix, 
-                      filtered_R2_suffix, args.single_ended, args.force_single_end)
-    append_message_to_log(validation_log, f"    - all expected fastq read files were found in {filtered_reads_dir}")
-    check_amplicon_intermediate_log_files(validation_log, filtered_reads_dir,
-                                           expected_filtered_outputs_or_suffixes)
-    for file in expected_filtered_outputs_or_suffixes:
-        append_message_to_log(validation_log, f"    - {file} was found in {filtered_reads_dir}")
-    append_message_to_log(validation_log, f"    - all expected files were found in the {filtered_reads_dir} directory")
-    # Check filtered multiqc outputs
-    filtered_multiqc_zip = os.path.join(filtered_multiqc_dir, filtered_multiqc_zip)
-    filtered_prefix = "filtered"   
-    check_multiqc_outputs(validation_log, sample_names, filtered_multiqc_zip,
-                          filtered_multiqc_stats_file_path, filtered_R1_suffix, 
-                          filtered_R2_suffix, filtered_suffix, filtered_prefix, args.single_ended, args.force_single_end)
-    append_message_to_log(validation_log, f"    - all expected samples were found in filtered multiqc files in {filtered_multiqc_dir}")
+    if args.entry_point != 'asv_tables':
+        # Filtered reads
+        check_fastq_files(validation_log, sample_names, filtered_reads_dir,
+                          filtered_suffix, filtered_R1_suffix,
+                          filtered_R2_suffix, args.single_ended, args.force_single_end)
+        append_message_to_log(validation_log, f"    - all expected fastq read files were found in {filtered_reads_dir}")
+        check_amplicon_intermediate_log_files(validation_log, filtered_reads_dir,
+                                               expected_filtered_outputs_or_suffixes)
+        for file in expected_filtered_outputs_or_suffixes:
+            append_message_to_log(validation_log, f"    - {file} was found in {filtered_reads_dir}")
+        append_message_to_log(validation_log, f"    - all expected files were found in the {filtered_reads_dir} directory")
+        # Check filtered multiqc outputs
+        filtered_multiqc_zip = os.path.join(filtered_multiqc_dir, filtered_multiqc_zip)
+        filtered_prefix = "filtered"
+        check_multiqc_outputs(validation_log, sample_names, filtered_multiqc_zip,
+                              filtered_multiqc_stats_file_path, filtered_R1_suffix,
+                              filtered_R2_suffix, filtered_suffix, filtered_prefix, args.single_ended, args.force_single_end)
+        append_message_to_log(validation_log, f"    - all expected samples were found in filtered multiqc files in {filtered_multiqc_dir}")
 
     # Check that all expected individual files exist in the final outputs directory and that the fasta files are rightly formatted 
     # i.e., the number of sequence headers equals the number of sequences in the fasta file.
@@ -709,9 +715,11 @@ def main():
     report_success(validation_log)
 
     # Raw
-    get_read_count_stats(validation_log, raw_prefix, raw_multiqc_zip, raw_multiqc_stats_file_path)
+    if args.entry_point == 'raw_reads':
+        get_read_count_stats(validation_log, raw_prefix, raw_multiqc_zip, raw_multiqc_stats_file_path)
     # Filtered
-    get_read_count_stats(validation_log, filtered_prefix, filtered_multiqc_zip, filtered_multiqc_stats_file_path)
+    if args.entry_point != 'asv_tables':
+        get_read_count_stats(validation_log, filtered_prefix, filtered_multiqc_zip, filtered_multiqc_stats_file_path)
 
 if __name__ == "__main__":
     main()

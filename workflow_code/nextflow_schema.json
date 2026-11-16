@@ -28,7 +28,7 @@
                 },
                 "input_file": {
                     "type": "string",
-                    "description": "Legacy alias for --runsheet. Amplicon runsheet CSV columns are sample_id,forward,[reverse,]paired,groups. Upload analysis requires --F_primer and --R_primer only when --trim_primers is true; --stage_only does not require primers.",
+                    "description": "Legacy alias for --runsheet.",
                     "format": "file-path"
                 },
                 "isa_archive": {
@@ -68,7 +68,7 @@
                 "runsheet": {
                     "type": "string",
                     "format": "file-path",
-                    "description": "Path to the Normalized Amplicon runsheet published in Metadata. Takes precedence over --input_file."
+                    "description": "Path to the input runsheet. Takes precedence over --input_file."
                 }
             },
             "required": [
@@ -88,13 +88,13 @@
                 },
                 "F_primer": {
                     "type": "string",
-                    "description": "Forward primer sequence e.g. AGAGTTTGATCCTGGCTCAG. Required for upload analysis (--runsheet or --input_file) when --trim_primers is true. Not required for --stage_only. Automatically sourced from the GeneLab runsheet when --accession is supplied.",
+                    "description": "Forward primer sequence e.g. AGAGTTTGATCCTGGCTCAG. Required when starting from raw reads with --trim_primers true, unless supplied in the runsheet. Not required for --stage_only. Automatically sourced from the GeneLab runsheet when --accession is supplied.",
                     "pattern": "^[A-Za-z]+$",
                     "errorMessage": "Forward primer sequence must contain letters only (no spaces, numbers, or special characters)"
                 },
                 "R_primer": {
                     "type": "string",
-                    "description": "Reverse primer sequence e.g. CTGCCTCCCGTAGGAGT. Required for upload analysis (--runsheet or --input_file) when --trim_primers is true. Not required for --stage_only. Automatically sourced from the GeneLab runsheet when --accession is supplied.",
+                    "description": "Reverse primer sequence e.g. CTGCCTCCCGTAGGAGT. Required when starting from raw reads with --trim_primers true, unless supplied in the runsheet. Not required for --stage_only. Automatically sourced from the GeneLab runsheet when --accession is supplied.",
                     "pattern": "^[A-Za-z]+$",
                     "errorMessage": "Reverse primer sequence must contain letters only (no spaces, numbers, or special characters)"
                 },
@@ -278,7 +278,7 @@
                 "stage_only": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Publish metadata and raw reads only; no QC, reference download or analysis."
+                    "description": "Publish the runsheet and staged inputs for the current entry point, then exit. truncate_to applies to raw and trimmed reads."
                 },
                 "post_processing": {
                     "type": "boolean",
@@ -295,13 +295,20 @@
                     "default": false,
                     "description": "Print workflow version and exit."
                 },
+                "truncate_to": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Use the first N FASTQ records from each raw or trimmed input file."
+                },
                 "entry_point": {
                     "type": "string",
                     "enum": [
-                        "raw_reads"
+                        "raw_reads",
+                        "trimmed_reads",
+                        "asv_tables"
                     ],
                     "default": "raw_reads",
-                    "description": "Amplicon currently supports raw reads only."
+                    "description": "Start from raw reads, primer-trimmed reads, or dataset-wide ASV count and taxonomy tables."
                 }
             }
         },

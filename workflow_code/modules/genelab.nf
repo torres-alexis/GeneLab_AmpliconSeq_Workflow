@@ -30,17 +30,21 @@ process GENERATE_README {
     beforeScript "chmod +x ${projectDir}/bin/*"
     tag "Generating README for ${params.OSD_accession}"
 
+    input:
+        val(entry_point)
+        val(is_single_end)
     output:
         path({ "${cleanedPrefix()}README${assaySuffix()}.txt" }), emit: readme
 
     script:
-        def raw_reads = enabled(params.include_raw_data) ? "--include-raw-reads" : ""
-        def trimmed_reads = enabled(params.trim_primers) ? "" : "--primers_already_trimmed"
-        def single_end = enabled(params.single_end) ? "--single-end" : ""
+        def raw_reads = (entry_point == 'raw_reads' && enabled(params.include_raw_data)) ? "--include-raw-reads" : ""
+        def trimmed_reads = (entry_point == 'raw_reads' && enabled(params.trim_primers)) ? "" : "--primers_already_trimmed"
+        def single_end = is_single_end ? "--single-end" : ""
         def force_single_end = params.force_single_end ? "--force-single-end ${params.force_single_end}" : ""
         """    
         GL-gen-processed-data-amplicon-readme-updated.py \\
              --output '${cleanedPrefix()}README${assaySuffix()}.txt' \\
+             --entry-point ${entry_point} \\
              --osd-id '${params.OSD_accession}' \\
              --name '${params.name}' \\
              --email '${params.email}' \\
@@ -63,18 +67,21 @@ process VALIDATE_PROCESSING {
         path(runsheet)
         path(README)
         path(processing_info)
+        val(entry_point)
+        val(is_single_end)
 
     output:
         path({ "${params.GLDS_accession}_${cleanedPrefix()}amplicon-validation${assaySuffix()}.log" }), emit: log
 
     script:
-        def raw_fastq = enabled(params.include_raw_data) ? "--include-raw-fastq" : ""
-        def primers_flag = enabled(params.trim_primers) ? "" : "--primers-already-trimmed"
-        def single_end_flag = enabled(params.single_end) ? "--single-ended" : ""
+        def raw_fastq = (entry_point == 'raw_reads' && enabled(params.include_raw_data)) ? "--include-raw-fastq" : ""
+        def primers_flag = (entry_point == 'raw_reads' && enabled(params.trim_primers)) ? "" : "--primers-already-trimmed"
+        def single_end_flag = is_single_end ? "--single-ended" : ""
         def force_single_end = params.force_single_end ? "--force-single-end ${params.force_single_end}" : ""
         """
         GL-validate-processed-amplicon-data \\
              --output '${params.GLDS_accession}_${cleanedPrefix()}amplicon-validation${assaySuffix()}.log' \\
+             --entry-point ${entry_point} \\
              --GLDS-ID '${params.GLDS_accession}' \\
              --runsheet '${runsheet}' \\
              --outdir '${processed_dir}' \\
@@ -107,20 +114,23 @@ process GENERATE_CURATION_TABLE {
         path(input_table)
         path(raw_multiqc_report_dir) // passed so the process has access to raw_multiqc to get read counts from
         path(final_outputs_dir) // passed so the process has access to final outputs to get alpha/beta diversity, taxonomy plots, and DA outputs
+        val(entry_point)
+        val(is_single_end)
 
     output:
         path({ "${params.GLDS_accession}_${cleanedPrefix()}associated-file-names${assaySuffix()}.tsv" }), emit: curation_table
 
     script:
-        def primers_flag = enabled(params.trim_primers) ? "" : "--primers-already-trimmed"
-        def single_end_flag = enabled(params.single_end) ? "--single-ended" : ""
+        def primers_flag = (entry_point == 'raw_reads' && enabled(params.trim_primers)) ? "" : "--primers-already-trimmed"
+        def single_end_flag = is_single_end ? "--single-ended" : ""
         def force_single_end = params.force_single_end ? "--force-single-end ${params.force_single_end}" : ""
-        def include_raw_fastq_flag = enabled(params.include_raw_data) ? "--include-raw-fastq" : ""
-        def include_raw_multiqc_flag = enabled(params.include_raw_multiqc) ? "--include-raw-multiqc-in-output" : ""
+        def include_raw_fastq_flag = (entry_point == 'raw_reads' && enabled(params.include_raw_data)) ? "--include-raw-fastq" : ""
+        def include_raw_multiqc_flag = (entry_point == 'raw_reads' && enabled(params.include_raw_multiqc)) ? "--include-raw-multiqc-in-output" : ""
         """
 
         GL-gen-amplicon-file-associations-table-GLfile.py --GL-file ${input_table} \\
                     --output '${params.GLDS_accession}_${cleanedPrefix()}associated-file-names${assaySuffix()}.tsv' \\
+                    --entry-point ${entry_point} \\
                     --GLDS-ID  '${params.GLDS_accession}' \\
                     --output-prefix '${cleanedPrefix()}' \\
                     --assay_suffix '${assaySuffix()}' \\
@@ -147,13 +157,14 @@ process GENERATE_MD5SUMS {
     input:
         val(processed_dir)
         val(done_token)
+        val(entry_point)
 
     output:
         path({ "${cleanedPrefix()}raw_md5sum${assaySuffix()}.tsv" }), emit: raw_md5sum, optional: true
         path({ "${cleanedPrefix()}processed_md5sum${assaySuffix()}.tsv" }), emit: processed_md5sum
     script:
-        def raw_md5_flag = (!params.force_single_end && enabled(params.include_raw_data)) ? "--generate_raw_md5sums" : ""
-        def primers_flag = enabled(params.trim_primers) ? "" : "--primers_already_trimmed"
+        def raw_md5_flag = (!params.force_single_end && (entry_point == 'raw_reads' && enabled(params.include_raw_data))) ? "--generate_raw_md5sums" : ""
+        def primers_flag = (entry_point == 'raw_reads' && enabled(params.trim_primers)) ? "" : "--primers_already_trimmed"
         """
         generate_md5sums.py --outdir ${processed_dir} --assay_suffix '${assaySuffix()}' --output_prefix '${cleanedPrefix()}' ${raw_md5_flag} ${primers_flag}
         """

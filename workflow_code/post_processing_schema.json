@@ -20,7 +20,7 @@
         "runsheet": {
           "type": "string",
           "format": "file-path",
-          "description": "Path to the Normalized Amplicon runsheet published in Metadata."
+          "description": "Path to the normalized Amplicon runsheet published in Metadata/."
         },
         "GLDS_accession": {
           "type": "string",
@@ -202,7 +202,7 @@
         "stage_only": {
           "type": "boolean",
           "default": false,
-          "description": "Publish metadata and raw reads only; no QC, reference download or analysis."
+          "description": "Publish metadata and inputs for the selected entry point, then exit."
         },
         "post_processing": {
           "type": "boolean",
@@ -222,10 +222,12 @@
         "entry_point": {
           "type": "string",
           "enum": [
-            "raw_reads"
+            "raw_reads",
+            "trimmed_reads",
+            "asv_tables"
           ],
           "default": "raw_reads",
-          "description": "Amplicon currently supports raw reads only."
+          "description": "Entry point used by the completed workflow; read from its processing record when available."
         }
       }
     },
@@ -258,7 +260,7 @@
         },
         "input_file": {
           "type": "string",
-          "description": "Legacy alias for --runsheet. Amplicon runsheet CSV columns are sample_id,forward,[reverse,]paired,groups. Upload analysis requires --F_primer and --R_primer only when --trim_primers is true; --stage_only does not require primers.",
+          "description": "Legacy alias for --runsheet.",
           "format": "file-path",
           "hidden": true
         },
@@ -282,14 +284,14 @@
         },
         "F_primer": {
           "type": "string",
-          "description": "Forward primer sequence e.g. AGAGTTTGATCCTGGCTCAG. Required for upload analysis (--runsheet or --input_file) when --trim_primers is true. Not required for --stage_only. Automatically sourced from the GeneLab runsheet when --accession is supplied.",
+          "description": "Forward primer sequence used with --trim_primers when starting from raw reads. Sourced from the runsheet when not supplied explicitly.",
           "pattern": "^[A-Za-z]+$",
           "errorMessage": "Forward primer sequence must contain letters only (no spaces, numbers, or special characters)",
           "hidden": true
         },
         "R_primer": {
           "type": "string",
-          "description": "Reverse primer sequence e.g. CTGCCTCCCGTAGGAGT. Required for upload analysis (--runsheet or --input_file) when --trim_primers is true. Not required for --stage_only. Automatically sourced from the GeneLab runsheet when --accession is supplied.",
+          "description": "Reverse primer sequence used with --trim_primers when starting from raw reads. Sourced from the runsheet when not supplied explicitly.",
           "pattern": "^[A-Za-z]+$",
           "errorMessage": "Reverse primer sequence must contain letters only (no spaces, numbers, or special characters)",
           "hidden": true
@@ -436,6 +438,12 @@
         "conda_wget": {
           "type": "string",
           "description": "Path to an existing conda environment containing wget.",
+          "hidden": true
+        },
+        "truncate_to": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Use the first N FASTQ records from each raw or trimmed input file.",
           "hidden": true
         }
       }

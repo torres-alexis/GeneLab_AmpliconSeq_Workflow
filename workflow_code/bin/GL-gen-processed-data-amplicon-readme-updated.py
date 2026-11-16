@@ -18,6 +18,7 @@ parser = argparse.ArgumentParser(
 required = parser.add_argument_group('required arguments')
 required.add_argument("--osd-id", help='OSDR osd_id ID (e.g. "OSD-69")', action="store", required=True)
 
+parser.add_argument("--entry-point", choices=["raw_reads", "trimmed_reads", "asv_tables"], default="raw_reads")
 parser.add_argument("--output", "--output-name", default="README",
                     help='Name of output file (default: "README")')
 parser.add_argument("--name", default="", required=True,
@@ -236,36 +237,41 @@ def write_amplicon_body(output):
 
         add_spacer(output)
 
-    # quality-filtered reads
-    add_level(filtered_reads_dir, "quality-filtered fastq files", pad, output, continues=[True])
-    add_level(f"filtered-read-counts{assay_suffix}.tsv", "per sample read counts before and after quality-filtering", pad, output, continues=[True, True])
-    # Filtered Sequence Data
-    if args.single_end:
-        if args.force_single_end == "R1":
-            add_level("*_R1_filtered.fastq.gz", "read1 filtered fastq files (used as single-end)", pad, output, continues=[True, True])
-        elif args.force_single_end == "R2":
-            add_level("*_R2_filtered.fastq.gz", "read2 filtered fastq files (used as single-end)", pad, output, continues=[True, True])
+    if args.entry_point != 'asv_tables':
+        # quality-filtered reads
+        add_level(filtered_reads_dir, "quality-filtered fastq files", pad, output, continues=[True])
+        add_level(f"filtered-read-counts{assay_suffix}.tsv", "per sample read counts before and after quality-filtering", pad, output, continues=[True, True])
+        # Filtered Sequence Data
+        if args.single_end:
+            if args.force_single_end == "R1":
+                add_level("*_R1_filtered.fastq.gz", "read1 filtered fastq files (used as single-end)", pad, output, continues=[True, True])
+            elif args.force_single_end == "R2":
+                add_level("*_R2_filtered.fastq.gz", "read2 filtered fastq files (used as single-end)", pad, output, continues=[True, True])
+            else:
+                add_level("*_filtered.fastq.gz", "filtered fastq files", pad, output, continues=[True, True])
         else:
-            add_level("*_filtered.fastq.gz", "filtered fastq files", pad, output, continues=[True, True])
-    else:
-        add_level("*_R1_filtered.fastq.gz", "read1 filtered fastq files", pad, output, continues=[True, True])
-        add_level("*_R2_filtered.fastq.gz", "read2 filtered fastq files", pad, output, continues=[True, True])
+            add_level("*_R1_filtered.fastq.gz", "read1 filtered fastq files", pad, output, continues=[True, True])
+            add_level("*_R2_filtered.fastq.gz", "read2 filtered fastq files", pad, output, continues=[True, True])
 
-    # Raw Sequence Data/MultiQC Reports
-    add_level(multiqc_dir, "multiQC summary reports of filtered FastQC runs", pad, output, continues=[True, False], is_last=True)
-    add_level(f"filtered_multiqc{args.assay_suffix}.html", "multiQC FastQC summary report", pad, output, continues=[True, False, True])
-    add_level(f"filtered_multiqc{args.assay_suffix}_data.zip", "multiQC FastQC summary report data", pad, output, continues=[True, False, True], is_last=True)    
+        # Raw Sequence Data/MultiQC Reports
+        add_level(multiqc_dir, "multiQC summary reports of filtered FastQC runs", pad, output, continues=[True, False], is_last=True)
+        add_level(f"filtered_multiqc{args.assay_suffix}.html", "multiQC FastQC summary report", pad, output, continues=[True, False, True])
+        add_level(f"filtered_multiqc{args.assay_suffix}_data.zip", "multiQC FastQC summary report data", pad, output, continues=[True, False, True], is_last=True)
 
-    add_spacer(output)
+        add_spacer(output)
 
     # final outputs
     add_level(tax_asv_outputs_dir, "", pad, output, continues=[True])
-    add_level(f"ASVs{assay_suffix}.fasta", "fasta file of recovered sequences", pad, output, continues=[True, True])
+    if args.entry_point != 'asv_tables':
+        add_level(f"ASVs{assay_suffix}.fasta", "fasta file of recovered sequences", pad, output, continues=[True, True])
     add_level(f"counts{assay_suffix}.tsv", "count table of sequences across samples", pad, output, continues=[True, True])
     add_level(f"taxonomy{assay_suffix}.tsv", "assigned taxonomy of recovered sequences", pad, output, continues=[True, True])
-    add_level(f"taxonomy-and-counts{assay_suffix}.tsv", "combined table of counts and taxonomy", pad, output, continues=[True, True])
-    add_level(f"taxonomy-and-counts{assay_suffix}.biom.zip", "biom-formatted output of counts and taxonomy", pad, output, continues=[True, True])
-    add_level(f"read-count-tracking{assay_suffix}.tsv", "read counts at each processing step", pad, output, continues=[True, False], is_last=True)
+    if args.entry_point != 'asv_tables':
+        add_level(f"taxonomy-and-counts{assay_suffix}.tsv", "combined table of counts and taxonomy", pad, output, continues=[True, True])
+    if args.entry_point != 'asv_tables':
+        add_level(f"taxonomy-and-counts{assay_suffix}.biom.zip", "biom-formatted output of counts and taxonomy", pad, output, continues=[True, True])
+    if args.entry_point != 'asv_tables':
+        add_level(f"read-count-tracking{assay_suffix}.tsv", "read counts at each processing step", pad, output, continues=[True, False], is_last=True)
 
     add_spacer(output)
 

@@ -27,7 +27,6 @@ include { ANCOMBC as ANCOMBC2 } from '../modules/ancombc.nf'
 include { DESEQ } from '../modules/deseq.nf'
 include { ZIP as ZIP_ANCOMBC1; ZIP as ZIP_ANCOMBC2; ZIP as ZIP_DESEQ2 } from '../modules/zip.nf'
 
-
 workflow AMPLICON {
     main:
 
@@ -108,101 +107,86 @@ workflow AMPLICON {
     STAGE_INPUTS.out.software_versions | mix(software_versions_ch) | set { software_versions_ch }
 
 
-    // Read quality check and trimming
-    RAW_FASTQC(staged_reads_ch)
-    raw_fastqc_files = RAW_FASTQC.out.fastqc.flatten().collect()
-
-    RAW_MULTIQC("raw", params.multiqc_config,raw_fastqc_files)
-
-    RAW_FASTQC.out.version | mix(software_versions_ch) | set{software_versions_ch}
-    RAW_MULTIQC.out.version | mix(software_versions_ch) | set{software_versions_ch}
-
-    // Download reference database for taxonomic classification
-    def db_config = [
-            "16S": ["SILVA_SSU_r138_2_v2.RData", "https://api.figshare.com/v2/file/download/64078939"],
-            "ITS": ["UNITE_v2025.RData", "https://api.figshare.com/v2/file/download/64079011"],
-            "18S": ["PR2_v4_13_March2021.RData", "https://api.figshare.com/v2/file/download/46241917"]
-        ]
-    target_region_ch = Channel.value(params.target_region)
-        .map { region -> tuple(region, db_config[region][0], db_config[region][1]) }
-
-    DOWNLOAD_DATABASE(target_region_ch)
-
+    raw_reads_ch = channel.empty()
+    raw_fastqc_ch = channel.empty()
+    raw_multiqc_zip_ch = channel.empty()
+    raw_multiqc_html_ch = channel.empty()
     trimmed_reads_ch = channel.empty()
     trimmed_reads_counts = channel.empty()
     cutadapt_logs = channel.empty()
-    if(enabled(params.trim_primers)){
+    filtered_reads_ch = channel.empty()
+    filtered_fastqc_ch = channel.empty()
+    filtered_multiqc_zip_ch = channel.empty()
+    filtered_multiqc_html_ch = channel.empty()
+    filtered_count = channel.value([])
+    asv_ch = channel.empty()
+    taxonomy_counts_ch = channel.empty()
+    biom_zip_ch = channel.empty()
+    read_count_ch = channel.empty()
+    dada_counts = STAGE_INPUTS.out.counts
+    dada_taxonomy = STAGE_INPUTS.out.taxonomy
 
-        CUTADAPT(staged_reads_ch, primers_ch)
-        logs = CUTADAPT.out.logs.map{ sample_id, log -> file("${log}")}.collect()
-        counts = CUTADAPT.out.trim_counts.map{ sample_id, count -> file("${count}")}.collect()
-        trimmed_reads_ch = CUTADAPT.out.reads.map{
-                                              sample_id, reads, isPaired -> reads instanceof List ? reads.each{file("${it}")}: file("${reads}")
-                                              }.flatten().collect()
+    if (params.entry_point != 'asv_tables') {
+        if (params.entry_point == 'raw_reads') {
+            raw_reads_ch = staged_reads_ch
+            RAW_FASTQC(staged_reads_ch)
+            RAW_MULTIQC('raw', params.multiqc_config, RAW_FASTQC.out.fastqc.flatten().collect())
+            raw_fastqc_ch = RAW_FASTQC.out.fastqc
+            raw_multiqc_zip_ch = RAW_MULTIQC.out.zipped_data
+            raw_multiqc_html_ch = RAW_MULTIQC.out.html
+            software_versions_ch = software_versions_ch.mix(RAW_FASTQC.out.version, RAW_MULTIQC.out.version)
+        }
 
-        COMBINE_CUTADAPT_LOGS_AND_SUMMARIZE(counts, logs, runsheet_ch)
-        trimmed_reads_counts = COMBINE_CUTADAPT_LOGS_AND_SUMMARIZE.out.counts
-        cutadapt_logs = COMBINE_CUTADAPT_LOGS_AND_SUMMARIZE.out.logs
+        def db_config = [
+            '16S': ['SILVA_SSU_r138_2_v2.RData', 'https://api.figshare.com/v2/file/download/64078939'],
+            'ITS': ['UNITE_v2025.RData', 'https://api.figshare.com/v2/file/download/64079011'],
+            '18S': ['PR2_v4_13_March2021.RData', 'https://api.figshare.com/v2/file/download/46241917']
+        ]
+        DOWNLOAD_DATABASE(channel.value(tuple(params.target_region, db_config[params.target_region][0], db_config[params.target_region][1])))
 
-        isPaired_ch = CUTADAPT.out.reads.map{
-                                              sample_id, reads, isPaired -> isPaired
-                                              }.first()
+        dada_input_ch = staged_reads_ch
+        dada_trim_counts = channel.value([])
+        def input_stage = params.entry_point == 'trimmed_reads' ? 'trimmed' : 'raw'
+        if (params.entry_point == 'raw_reads' && enabled(params.trim_primers)) {
+            CUTADAPT(staged_reads_ch, primers_ch)
+            dada_input_ch = CUTADAPT.out.reads
+            COMBINE_CUTADAPT_LOGS_AND_SUMMARIZE(
+                CUTADAPT.out.trim_counts.map { id, count -> count }.collect(),
+                CUTADAPT.out.logs.map { id, log -> log }.collect(), runsheet_ch)
+            trimmed_reads_counts = COMBINE_CUTADAPT_LOGS_AND_SUMMARIZE.out.counts
+            dada_trim_counts = trimmed_reads_counts
+            cutadapt_logs = COMBINE_CUTADAPT_LOGS_AND_SUMMARIZE.out.logs
+            input_stage = 'trimmed'
+            software_versions_ch = software_versions_ch.mix(CUTADAPT.out.version)
+        }
+        if (input_stage == 'trimmed') {
+            trimmed_reads_ch = dada_input_ch.map { id, reads, paired -> reads }.flatten()
+        }
+        isPaired_ch = dada_input_ch.map { id, reads, paired -> paired }.first()
+        samples_ch = runsheet_ch.combine(isPaired_ch)
+        reads_ch = dada_input_ch.map { id, reads, paired -> reads }.flatten().collect()
+        RUN_DADA2(samples_ch, reads_ch, dada_trim_counts, DOWNLOAD_DATABASE.out.database, input_stage)
+        dada_counts = RUN_DADA2.out.counts
+        dada_taxonomy = RUN_DADA2.out.taxonomy
+        filtered_count = RUN_DADA2.out.filtered_count
+        asv_ch = RUN_DADA2.out.fasta
+        taxonomy_counts_ch = RUN_DADA2.out.taxonomy_count
+        read_count_ch = RUN_DADA2.out.read_count
 
-        samples_ch = runsheet_ch.first()
-                     .concat(isPaired_ch)
-                     .collate(2)
-
-
-        // Run dada2
-        RUN_DADA2(samples_ch, trimmed_reads_ch, trimmed_reads_counts, DOWNLOAD_DATABASE.out.database)
-
-        CUTADAPT.out.version | mix(software_versions_ch) | set{software_versions_ch}
-    }else{
-        raw_reads_ch = staged_reads_ch.map{
-                          sample_id, reads, isPaired -> reads instanceof List ? reads.each{file("${it}")}: file("${reads}")
-                          }.flatten().collect()
-
-        isPaired_ch = staged_reads_ch.map{sample_id, reads, isPaired -> isPaired}.first()
-        samples_ch = runsheet_ch.first()
-                     .concat(isPaired_ch)
-                     .collate(2)
-
-        // Run dada2 without primer trimming
-        RUN_DADA2(samples_ch, raw_reads_ch, [], DOWNLOAD_DATABASE.out.database)
-    }
-
-    dada_counts = RUN_DADA2.out.counts
-    dada_taxonomy = RUN_DADA2.out.taxonomy
-    dada_biom = RUN_DADA2.out.biom
-    filtered_count = RUN_DADA2.out.filtered_count
-
-    filtered_reads_ch = RUN_DADA2.out.reads
-            .flatten()
+        filtered_reads_ch = RUN_DADA2.out.reads.flatten()
             .map { read -> tuple(filteredSampleId(read.name, assaySuffix()), read) }
-            .groupTuple(by:0)  // group R1/R2 by sample_id
-            .map { sample_id, files ->
-                    def pathFiles = files.collect { it instanceof String ? file(it) : it }  // ensure Path objects
-                    def isPaired = pathFiles.size() > 1
-                    tuple(sample_id, pathFiles, isPaired)
-            }
-
-    FILTERED_FASTQC(filtered_reads_ch)
-        filtered_fastqc_files = FILTERED_FASTQC.out.fastqc.flatten().collect()
-
-    FILTERED_MULTIQC("filtered", params.multiqc_config, filtered_fastqc_files)
-
-    RUN_DADA2.out.version | mix(software_versions_ch) | set{software_versions_ch}
-    FILTERED_FASTQC.out.version | mix(software_versions_ch) | set{software_versions_ch}
-    FILTERED_MULTIQC.out.version | mix(software_versions_ch) | set{software_versions_ch}
-
-    // Zip biom file
-    dada_biom
-        .map { biom -> tuple("taxonomy-and-counts", biom) }
-        | ZIP_BIOM
-
-    ZIP_BIOM.out.version | mix(software_versions_ch) | set{software_versions_ch}
-
-
+            .groupTuple(by: 0)
+            .map { id, reads -> tuple(id, reads, reads.size() > 1) }
+        FILTERED_FASTQC(filtered_reads_ch)
+        FILTERED_MULTIQC('filtered', params.multiqc_config, FILTERED_FASTQC.out.fastqc.flatten().collect())
+        filtered_fastqc_ch = FILTERED_FASTQC.out.fastqc
+        filtered_multiqc_zip_ch = FILTERED_MULTIQC.out.zipped_data
+        filtered_multiqc_html_ch = FILTERED_MULTIQC.out.html
+        ZIP_BIOM(RUN_DADA2.out.biom.map { tuple('taxonomy-and-counts', it) })
+        biom_zip_ch = ZIP_BIOM.out.zip
+        software_versions_ch = software_versions_ch.mix(RUN_DADA2.out.version, FILTERED_FASTQC.out.version,
+            FILTERED_MULTIQC.out.version, ZIP_BIOM.out.version)
+    }
 
     // Diversity, differential abundance testing and their corresponding visualizations
     values = ["samples": "sample_id",
@@ -432,14 +416,14 @@ workflow AMPLICON {
     ch_published = pub(runsheet_ch.mix(isa_archive_ch), 'Metadata')
         .mix(
             pub(source_runsheet_ch, 'Metadata/source'),
-            pub(staged_reads_ch.map { id, reads, paired -> reads }, 'Raw_Sequence_Data'),
+            pub(raw_reads_ch.map { id, reads, paired -> reads }, 'Raw_Sequence_Data'),
             pub(trimmed_reads_ch.mix(trimmed_reads_counts, cutadapt_logs), 'Trimmed_Sequence_Data'),
             pub(filtered_reads_ch.map { id, reads, paired -> reads }.mix(filtered_count), 'Filtered_Sequence_Data'),
-            pub(RAW_FASTQC.out.fastqc, 'Raw_Sequence_Data/FastQC_Outputs'),
-            pub(FILTERED_FASTQC.out.fastqc, 'Filtered_Sequence_Data/FastQC_Outputs'),
-            pub(RAW_MULTIQC.out.zipped_data.mix(RAW_MULTIQC.out.html), 'Raw_Sequence_Data/MultiQC_Reports'),
-            pub(FILTERED_MULTIQC.out.zipped_data.mix(FILTERED_MULTIQC.out.html), 'Filtered_Sequence_Data/MultiQC_Reports'),
-            pub(RUN_DADA2.out.fasta.mix(RUN_DADA2.out.counts, RUN_DADA2.out.taxonomy, RUN_DADA2.out.taxonomy_count, ZIP_BIOM.out.zip, RUN_DADA2.out.read_count,
+            pub(raw_fastqc_ch, 'Raw_Sequence_Data/FastQC_Outputs'),
+            pub(filtered_fastqc_ch, 'Filtered_Sequence_Data/FastQC_Outputs'),
+            pub(raw_multiqc_zip_ch.mix(raw_multiqc_html_ch), 'Raw_Sequence_Data/MultiQC_Reports'),
+            pub(filtered_multiqc_zip_ch.mix(filtered_multiqc_html_ch), 'Filtered_Sequence_Data/MultiQC_Reports'),
+            pub(asv_ch.mix(dada_counts, dada_taxonomy, taxonomy_counts_ch, biom_zip_ch, read_count_ch,
                 ALPHA_DIVERSITY.out.output_dir, BETA_DIVERSITY.out.output_dir, PLOT_TAXONOMY.out.output_dir), 'Final_Outputs'),
             pub(ZIP_ALPHA.out.zip, 'Final_Outputs/alpha_diversity'),
             pub(ZIP_BETA_EUCLIDEAN.out.zip.mix(ZIP_BETA_BRAY.out.zip), 'Final_Outputs/beta_diversity'),
