@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added `trimmed_reads` and `asv_tables` entry points, including OSDR input retrieval
+- Added `--stage_only` for input staging and `--truncate_to` to retain the first N records from each input FASTQ file
+- Added `--runsheet` for workflow execution, retaining `--input_file` as an alias
+- Capture workflow commands, process scripts and run metadata automatically in `processing_scripts/`
 - Option to run workflow in accession mode using a local ISA archive (`--isa_archive` parameter)
 - Caching support for reference databases to avoid redundant downloads on repeated runs of the main workflow
 - A Bioconductor package (microbiome 1.32.0) that is required by ANCOMBC >= 2.12
@@ -16,20 +20,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Validation for alpha/beta diversity outputs, including failure files and rarefaction depth consistency across both analyses, for taxonomy plots, and for outputs of the three differential abundance methods, including per-method volcano plot counts against number of contrasts
 - `post_processing_schema.json` for parameter validation and automated help menu generation
 
-
 ### Fixed
 
+- Fixed validation to require exact filenames for named outputs
+- Fixed checksum generation for published outputs
+- Preserved sample IDs when parsing filenames, runsheets and count summaries
+- Fixed BIOM counts, identifiers and taxonomy labels
+- Updated post-processing to refresh outputs when resuming
+- Fixed quoting for metadata paths and post-processing arguments
+- Fixed path cleaning when packaging moved outputs
+- Pinned `r-cvxr=1.0_15` and `r-rbiom=2.2.1` for the Conda diversity environment
+- Fixed single-end read staging
 - Fixed empty Cutadapt logs and missing read counts during single-end processing
-- Fix single-end read staging.
-- Pin `r-cvxr=1.0_15` and `r-rbiom=2.2.1` for the Conda diversity environment.
+- Handled boolean parameters consistently when supplied as boolean or string values
+- Corrected output-prefix handling and MultiQC filenames in generated file listings, file associations and validation
+- Preserved command syntax when cleaning local paths in packaged processing records
+- Reported unavailable tool versions as `unknown` in generated protocols
 - Removed the browser user-agent override from reference database downloads
 - Write a failure text file and continue when metadata has fewer than two groups for beta diversity and differential abundance (ANCOMBC1/2, DESeq2), same as alpha diversity
 - Fixed `assay_suffix` chained parameter evaluation, which was previously evaluated at parse time instead of runtime
-- ANCOMBC2 column renaming failing on two-group comparisons due to the new `diff_robust_*` column in ANCOMBC 2.12
+- Fixed ANCOMBC2 column renaming for two-group comparisons with the `diff_robust_*` column returned by ANCOMBC 2.12
 - ANCOMBC2 failing with "$ operator is invalid for atomic vectors" when dropping zero-variance taxa exposes new ones; newly named taxa are now dropped and ANCOMBC2 is run again until it returns a result or names no new taxa
 - Main and post-processing workflows failing under Nextflow's strict v2 syntax parser; moved top-level code into `workflow` blocks and removed config-level `trace_timestamp` and `parent_dir` variables
 
 ### Changed
+
+- Simplified output publishing and consolidated shared functions
+- Used one runsheet format across all input approaches, replacing the separate generated `GLfile.csv`
+- Separated container, Conda, executor and process resource settings into configuration files under `conf/`
+- Updated post-processing for intermediate entry points and single-end or paired-end reads
+- Updated workflow examples, parameter descriptions and runsheet instructions
 - Drop groups with fewer than 2 samples before ANCOMBC1 and ANCOMBC2 and write them to `samples_dropped<assay_suffix>.txt`
 - Changed `concatenate_reads_only` from a `"TRUE"`/`"FALSE"` string to a boolean (`true`/`false`)
 - Migrated output handling to Nextflow `workflow output {}` block in both main and post-processing workflows; removed deprecated suffix and directory parameters from `nextflow.config` and `post_processing.config`
@@ -49,7 +69,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Modified `nextflow_schema.json` to reflect updated pipeline parameters with improved parameter descriptions and group definitions 
 - Wired up `nf-schema` plugin to `nextflow_schema.json` for parameter validation and automated help menu generation
 - Bumped `nf-schema` plugin from 2.6.0 to 2.8.0 and require Nextflow 26.04 or later
-- Updated `post_processing.config` to support running the post-processing workflow with `-C` instead of `-c` (i.e., disregards the default `nextflow.config` and uses only `post_processing.config` ); modified launch scripts (`launch.sh` and `slurm_submit.slurm`) accordingly
+- Run post-processing with `--post_processing`; retain `post_processing.nf` and `post_processing.config` for existing commands
 - Prepend the target region to `assay_suffix` by default, e.g. a 16S run publishes `_16S_GLAmpSeq`. Disable with `--prepend_target_region false`
 - Update pipeline document references from GL-DPPD-7104-C to GL-DPPD-7104-D 
 
@@ -71,6 +91,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated third-party licenses
 
 ### Removed
+
+- Removed `launch.sh` and updated `launch.slurm` to invoke Nextflow directly
 - Removed `run_workflow.py` script as it was deemed unnecessary for the Nextflow workflow setup; cleaned up related commands in `slurm_submit.slurm`
 
 <br>
