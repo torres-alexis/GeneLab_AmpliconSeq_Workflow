@@ -20,7 +20,23 @@ def shellQuote(value) {
 }
 
 def pub(ch, dir) {
-    return ch.flatten().map { f -> ["${dir}/${f.name}".toString(), f] }
+    return ch.flatten().flatMap { f ->
+        def children = f.isDirectory() ? f.listFiles() : []
+        def output_root = workflow.outputDir.normalize()
+        def destination_dir = output_root.resolve(dir)
+        if (children) destination_dir = destination_dir.resolve(f.name)
+        def relative_dir = output_root.relativize(destination_dir)
+        (1..relative_dir.nameCount).each { depth ->
+            def parent_dir = output_root.resolve(relative_dir.subpath(0, depth))
+            if (parent_dir != output_root && java.nio.file.Files.isSymbolicLink(parent_dir)) {
+                def link_target = parent_dir.parent.resolve(java.nio.file.Files.readSymbolicLink(parent_dir)).normalize()
+                throw new IllegalArgumentException("Cannot publish into ${parent_dir}: this existing output folder points to ${link_target}. Publishing here would write into that linked directory. Use a new output directory with --outdir (or -o if specified).")
+            }
+        }
+        if (children)
+            return children.collect { child -> ["${dir}/${f.name}/${child.name}".toString(), child] }
+        [["${dir}/${f.name}".toString(), f]]
+    }
 }
 
 def cleanedPrefix() {
