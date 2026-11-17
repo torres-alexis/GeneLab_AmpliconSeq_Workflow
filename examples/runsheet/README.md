@@ -25,15 +25,13 @@ processing pipeline (AmpIllumina).
 
 ## Entry Point Columns
 
-For entry points other than the default raw_reads, replace the "forward" and "reverse" columns above with the relevant input columns below. All entry points require "sample_id" and "groups"; "paired" is required for raw_reads and trimmed_reads.
+For entry points other than the default raw_reads, include the relevant columns below to specify the input files.
 
 | Column Name | Entry Point | Type | Description | Example |
 |:------------|:------------|:-----|:------------|:--------|
 | trimmed_read1_path | trimmed_reads | string | Path or URL to primer-trimmed forward reads | /my/data/sample1_16S_GLAmpSeq_R1_trimmed.fastq.gz |
 | trimmed_read2_path | trimmed_reads | string | Path or URL to primer-trimmed reverse reads (paired-end only) | /my/data/sample1_16S_GLAmpSeq_R2_trimmed.fastq.gz |
-| counts_table_path | asv_tables | string | Path or URL to the dataset-wide ASV count table | /my/data/counts_16S_GLAmpSeq.tsv |
-| taxonomy_table_path | asv_tables | string | Path or URL to the corresponding taxonomy table | /my/data/taxonomy_16S_GLAmpSeq.tsv |
+| counts_table_path | asv_tables | string | Path or URL to the ASV count table (tab-separated) | /my/data/counts_16S_GLAmpSeq.tsv |
+| taxonomy_table_path | asv_tables | string | Path or URL to the matching ASV taxonomy table (tab-separated) | /my/data/taxonomy_16S_GLAmpSeq.tsv |
 
-For asv_tables, repeat the same count-table and taxonomy-table paths for every sample row. Both tables must be tab-separated, with ASV IDs in the first column. The count table must contain a column for every runsheet sample; additional samples are excluded. Counts must be nonnegative integers. The taxonomy table must include every count-table ASV and the columns "domain", "phylum", "class", "order", "family", "genus" and "species".
-
-Relative paths are resolved from the directory where Nextflow is launched.
+For asv_tables, use the same count-table and taxonomy-table paths for every sample row.
