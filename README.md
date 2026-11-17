@@ -16,7 +16,7 @@ The table below details the default maximum resource allocations for individual 
 |-------------------|----------------|
 | 10                | 20 GB          |
 
-> **Note:** These per-process resource allocations are defaults. They can be adjusted by modifying `cpus` and `memory` directives in the configuration file: [`conf/process_resources.config`](workflow_code/conf/process_resources.config).
+> **Note:** These per-process resource allocations are defaults. They can be adjusted by modifying `cpus` and `memory` directives in the configuration file: [conf/process_resources.config](workflow_code/conf/process_resources.config).
 
 <br>
 
@@ -105,13 +105,13 @@ Although Nextflow can fetch Singularity images from a url, doing so may cause is
 
 To avoid this issue, run the following command to fetch the Singularity images prior to running the NF_AmpIllumina workflow:
 > [!NOTE]
-> This command should be run in the location containing the `NF_AmpIllumina_1.0.10` directory that was downloaded in [step 2](#2-download-the-workflow-files) above. Depending on your network speed, fetching the images will take ~20 minutes. Approximately 4GB of RAM is needed to download and build the Singularity images.
+> This command should be run in the location containing the NF_AmpIllumina_1.0.10 directory that was downloaded in [step 2](#2-download-the-workflow-files) above. Depending on your network speed, fetching the images will take ~20 minutes. Approximately 4GB of RAM is needed to download and build the Singularity images.
 
 ```bash
 bash NF_AmpIllumina_1.0.10/bin/prepull_singularity.sh NF_AmpIllumina_1.0.10/conf/by_docker_image.config
 ```
 
-Once complete, a `singularity` folder containing the Singularity images will be created. Run the following command to export this folder as a Nextflow configuration environment variable to ensure Nextflow can locate the fetched images:
+Once complete, a "singularity" folder containing the Singularity images will be created. Run the following command to export this folder as a Nextflow configuration environment variable to ensure Nextflow can locate the fetched images:
 
 ```bash
 export NXF_SINGULARITY_CACHEDIR=$(pwd)/singularity
@@ -123,7 +123,7 @@ export NXF_SINGULARITY_CACHEDIR=$(pwd)/singularity
 
 ### 4. Run the Workflow
 
-While in the location containing the `NF_AmpIllumina_1.0.10` directory that was downloaded in [step 2](#2-download-the-workflow-files), you are now able to run the workflow.
+While in the location containing the NF_AmpIllumina_1.0.10 directory that was downloaded in [step 2](#2-download-the-workflow-files), you are now able to run the workflow.
 
 Below are three examples of how to run the NF_AmpIllumina workflow:
 
@@ -191,7 +191,7 @@ nextflow run NF_AmpIllumina_1.0.10/main.nf \
 > [!NOTE]
 > By default, the `conda` and `mamba` profiles create environments at runtime using the YAML files in the [workflow_code/envs](workflow_code/envs/) folder. You can change this behavior by using the `--conda_*` workflow parameters or by editing the [nextflow.config](workflow_code/nextflow.config) file to specify a centralized conda environments directory via the `conda.cacheDir` parameter.
 
-* `--target_region` - Amplicon target region: `16S`, `18S` or `ITS` (type: string, default: "16S")
+* `--target_region` - Amplicon target region: 16S, 18S or ITS (type: string, default: "16S")
 
 <br>
 
@@ -229,7 +229,7 @@ nextflow run NF_AmpIllumina_1.0.10/main.nf \
 
 * `--outdir` - Specifies the base directory where the output directories will be created (type: string, default: "${launchDir}")
 
-* `--stage_only` - Publish the runsheet and staged inputs for the selected `--entry_point`, then exit. `truncate_to` applies to raw and trimmed reads (type: boolean, default: false)
+* `--stage_only` - Publish the runsheet and staged inputs for the selected `--entry_point`, then exit. `--truncate_to` applies to raw and trimmed reads (type: boolean, default: false)
 
 * `--post_processing` - Run the post-processing workflow (type: boolean, default: false)
 
@@ -249,9 +249,9 @@ nextflow run NF_AmpIllumina_1.0.10/main.nf \
 
 * **DADA2 Filtering Parameters** - Options for filtering and truncating reads before ASV inference:
 
-  * `--left_trunc` - Truncate forward reads to this length in bases during DADA2 `filterAndTrim()`. Bases beyond this position are removed; shorter reads are discarded. Set to `0` to disable length truncation (type: integer, default: 0)
+  * `--left_trunc` - Truncate forward reads to this length in bases during DADA2 filterAndTrim(). Bases beyond this position are removed; shorter reads are discarded. Set to 0 to disable length truncation (type: integer, default: 0)
 
-  * `--right_trunc` - Truncate reverse reads to this length in bases during DADA2 `filterAndTrim()`. Bases beyond this position are removed; shorter reads are discarded. Set to `0` to disable length truncation (type: integer, default: 0)
+  * `--right_trunc` - Truncate reverse reads to this length in bases during DADA2 filterAndTrim(). Bases beyond this position are removed; shorter reads are discarded. Set to 0 to disable length truncation (type: integer, default: 0)
 
   * `--left_maxEE` - Maximum expected errors allowed in forward reads (type: integer, default: 1)
 
@@ -261,15 +261,15 @@ nextflow run NF_AmpIllumina_1.0.10/main.nf \
 
   * `--rarefaction_depth` - Target minimum read count per sample for rarefaction in alpha diversity and Bray-Curtis beta diversity analyses. The workflow uses the lowest sample count at or above this value, or the lowest count if none reach it. Samples below the selected depth are excluded (type: integer, default: 500)
 
-  * `--diff_abund_method` - Differential abundance testing method to run. `all` runs ANCOMBC v1, ANCOMBC v2 and DESeq2 (type: string, options: all, ancombc1, ancombc2, or deseq2, default: "all")
+  * `--diff_abund_method` - Differential abundance testing method to run. all runs ANCOMBC v1, ANCOMBC v2 and DESeq2 (type: string, options: all, ancombc1, ancombc2, or deseq2, default: "all")
 
 * **Output Naming Parameters** - Options for naming output files:
 
-  * `--output_prefix` - Prefix to add to output filenames, e.g. "Study1_". An underscore is appended unless the prefix already ends with `_` or `-`. Leave empty for no prefix (type: string, default: "")
+  * `--output_prefix` - Prefix to add to output filenames, e.g. "Study1_". An underscore is appended unless the prefix already ends with '_' or '-'. Leave empty for no prefix (type: string, default: "")
 
   * `--assay_suffix` - Assay label appended to output filenames. The target region is inserted before this suffix when `--prepend_target_region` is true (type: string, default: "_GLAmpSeq")
 
-  * `--prepend_target_region` - Prepend `--target_region` to `--assay_suffix`, e.g. `_16S_GLAmpSeq` for a 16S run. Set to false to use `--assay_suffix` as supplied (type: boolean, default: true)
+  * `--prepend_target_region` - Prepend `--target_region` to `--assay_suffix`, e.g. "_16S_GLAmpSeq" for a 16S run. Set to false to use `--assay_suffix` as supplied (type: boolean, default: true)
 
 * **Sample Selection Parameters** - Options for selecting samples and reads:
 
@@ -277,7 +277,7 @@ nextflow run NF_AmpIllumina_1.0.10/main.nf \
 
   * `--limit_samples_to` - Process only the first specified number of samples from the runsheet (type: integer, default: null)
 
-  * `--force_single_end` - Process paired-end data as single-end data using the selected read (type: string, options: R1 or R2, default: null)
+  * `--force_single_end` - Process paired-end data as single-end data using the selected read (type: string, options: "R1" or "R2", default: null)
 
 * **Entry Point Parameters** - Options for starting the workflow from different processing steps:
 
@@ -285,8 +285,8 @@ nextflow run NF_AmpIllumina_1.0.10/main.nf \
 > When using `--accession` and running the workflow from an intermediate entry point, the workflow downloads the input files from [OSDR](https://osdr.nasa.gov/bio/repo/) and generates the runsheet containing the required metadata. See the [runsheet README](examples/runsheet/README.md) for runsheet format details.
 
 * `--entry_point` - Specifies the workflow entry point to start from (type: string, default: "raw_reads"). Available options:
-  - `raw_reads` - Start from raw read files (`.fastq.gz`) (default)
-  - `trimmed_reads` - Start from primer-trimmed read files (`.fastq.gz`). Raw read quality-checking and primer removal are skipped
+  - `raw_reads` - Start from raw read files (.fastq.gz) (default)
+  - `trimmed_reads` - Start from primer-trimmed read files (.fastq.gz). Raw read quality-checking and primer removal are skipped
   - `asv_tables` - Start from one ASV count table and one taxonomy table for the full dataset (e.g. counts_16S_GLAmpSeq.tsv and taxonomy_16S_GLAmpSeq.tsv)
 
 **Additional Optional Parameters:**
@@ -303,7 +303,7 @@ Additionally, workflow parameters can be directly specified in the [nextflow.con
 
 Once you've downloaded the workflow template, you can modify the parameters in the `params` scope in [nextflow.config](workflow_code/nextflow.config) and CPU/memory requirements in the `process` scope in [conf/process_resources.config](workflow_code/conf/process_resources.config) as needed to match your dataset and system setup.
 
-Container images for Docker and Singularity are specified in [conf/by_docker_image.config](workflow_code/conf/by_docker_image.config), and Conda environments for Conda and Mamba are specified in [conf/by_conda_env.config](workflow_code/conf/by_conda_env.config). Local and SLURM executor settings are specified in [conf/local.config](workflow_code/conf/local.config) and [conf/slurm.config](workflow_code/conf/slurm.config), respectively. The `profiles` section in [nextflow.config](workflow_code/nextflow.config) defines which software environment and executor settings are loaded when you use `-profile`.
+Container images for Docker and Singularity are specified in [conf/by_docker_image.config](workflow_code/conf/by_docker_image.config), and Conda environments for Conda and Mamba are specified in [conf/by_conda_env.config](workflow_code/conf/by_conda_env.config). Local and SLURM executor settings are specified in [conf/local.config](workflow_code/conf/local.config) and [conf/slurm.config](workflow_code/conf/slurm.config), respectively. The profiles section in [nextflow.config](workflow_code/nextflow.config) defines which software environment and executor settings are loaded when you use `-profile`.
 
 ### 5. Workflow Outputs
 
@@ -332,7 +332,7 @@ The outputs from this pipeline are documented in the [GL-DPPD-7104-D](https://gi
 The post-processing workflow is designed to validate processed data generated by the main workflow, package processing information, purge file paths when necessary, and generate a file association table suitable for uploading to OSDR, in addition to other output files, such as README, protocol and MD5 checksum tables.
 
 > [!NOTE]
-> Post-processing requires the completed workflow output directory, including the automatically generated `processing_scripts/` folder containing the run command and process scripts.
+> Post-processing requires the completed workflow output directory, including the automatically generated processing_scripts/ folder containing the run command and process scripts.
 
 Set the post-processing parameters in [conf/post_processing.config](workflow_code/conf/post_processing.config), using the same runsheet, target region, filename settings and read-processing options as the main workflow. Run the following command from the workflow output directory:
 
