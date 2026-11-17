@@ -6,7 +6,7 @@ include { assaySuffix } from './utils.nf'
  * This process stages raw read files and renames them to standardized naming convention.
  * 
  * For URLs: Nextflow automatically downloads them during staging, then this process
- * renames the downloaded files (1.gz, 2.gz) to the expected format using configured suffixes.
+ * renames the staged files (read1.gz, read2.gz) to the expected format using configured suffixes.
  * 
  * For local files: Nextflow stages them as symlinks, then this process renames
  * them to the standardized format.
@@ -24,7 +24,7 @@ process COPY_READS {
     tag "${ sample_id }"
 
     input:
-        tuple val(sample_id), path("*.gz"), val(paired)
+        tuple val(sample_id), path("read?.gz"), val(paired)
 
     output:
         tuple val(sample_id), path("${sample_id}*.gz"), val(paired), emit: raw_reads
@@ -32,21 +32,21 @@ process COPY_READS {
     script:
         if ( paired == 'true' ) {
         """
-        cp -P 1.gz ${sample_id}${assaySuffix()}_R1_raw.fastq.gz
-        cp -P 2.gz ${sample_id}${assaySuffix()}_R2_raw.fastq.gz
+        cp -P read1.gz ${sample_id}${assaySuffix()}_R1_raw.fastq.gz
+        cp -P read2.gz ${sample_id}${assaySuffix()}_R2_raw.fastq.gz
         """
         } else if ( paired == 'false') {
             if ( params.force_single_end == "R1" ) {
             """
-            cp -P 1.gz ${sample_id}${assaySuffix()}_R1_raw.fastq.gz
+            cp -P read1.gz ${sample_id}${assaySuffix()}_R1_raw.fastq.gz
             """
             } else if ( params.force_single_end == "R2" ) {
             """
-            cp -P 1.gz ${sample_id}${assaySuffix()}_R2_raw.fastq.gz
+            cp -P read1.gz ${sample_id}${assaySuffix()}_R2_raw.fastq.gz
             """
             } else { 
             """
-            cp -P 1.gz ${sample_id}${assaySuffix()}_raw.fastq.gz
+            cp -P read1.gz ${sample_id}${assaySuffix()}_raw.fastq.gz
             """ 
             }
         }
