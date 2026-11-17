@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed empty Cutadapt logs and missing read counts during single-end processing
 - Pin `r-cvxr=1.0_15` and `r-rbiom=2.2.1` for the Conda diversity environment.
 - Removed the browser user-agent override from reference database downloads
 - Write a failure text file and continue when metadata has fewer than two groups for beta diversity and differential abundance (ANCOMBC1/2, DESeq2), same as alpha diversity
