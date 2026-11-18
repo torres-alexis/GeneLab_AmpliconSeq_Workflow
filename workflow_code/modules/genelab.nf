@@ -54,6 +54,7 @@ process GENERATE_README {
 
 
 process VALIDATE_PROCESSING {
+    cache false
 
     tag "Running automated validation and verification...."
 
@@ -82,6 +83,7 @@ process VALIDATE_PROCESSING {
              --output-prefix '${cleanedPrefix()}' \\
              --zip_targets '${target_files}' \\
              --assay_suffix '${params.assay_suffix}' \\
+             --diff-abund-method '${params.diff_abund_method}' \\
              --raw_suffix "${params.assay_suffix}_raw.fastq.gz" \\
              --raw_R1_suffix "${params.assay_suffix}_R1_raw.fastq.gz" \\
              --raw_R2_suffix "${params.assay_suffix}_R2_raw.fastq.gz" \\

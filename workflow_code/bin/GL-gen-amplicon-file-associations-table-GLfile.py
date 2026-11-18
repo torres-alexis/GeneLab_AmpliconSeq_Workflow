@@ -168,7 +168,7 @@ def get_read_counts_from_raw_multiqc(mapping_tab, raw_multiqc_stats_file_path,
         return(df)
 
     else:
-        input_zip = os.path.join(raw_multiqc_dir, output_prefix + raw_multiqc_zip)
+        input_zip = os.path.join(raw_multiqc_dir, raw_multiqc_zip)
         zip_file = zipfile.ZipFile(input_zip)
         #df = pd.read_csv(zip_file.open(raw_multiqc_stats_file_path), sep = "\t", usecols = [0,6])
         df = pd.read_csv(zip_file.open(raw_multiqc_stats_file_path), sep = "\t")
@@ -406,15 +406,15 @@ def create_association_table(header_colnames, multiqc,
                                  ", ".join(curr_filt_data),
                                  filtered_multiqc,
                                  final_outputs_dict["Taxonomy and ASV Counts Data"],
-                                 final_outputs_dict["Alpha Diversity Data"],
-                                 final_outputs_dict["Beta Diversity Data"],
-                                 final_outputs_dict["Beta Diversity Data/Bray-Curtis"],
-                                 final_outputs_dict["Beta Diversity Data/Euclidean_distance"],
-                                 final_outputs_dict["Taxonomy Plots"],
-                                 final_outputs_dict["Differential Abundance"],
-                                 final_outputs_dict["Differential Abundance/ANCOMBC1"],
-                                 final_outputs_dict["Differential Abundance/ANCOMBC2"],
-                                 final_outputs_dict["Differential Abundance/DESeq2"]])
+                                 final_outputs_dict.get("Alpha Diversity Data", ""),
+                                 final_outputs_dict.get("Beta Diversity Data", ""),
+                                 final_outputs_dict.get("Beta Diversity Data/Bray-Curtis", ""),
+                                 final_outputs_dict.get("Beta Diversity Data/Euclidean_distance", ""),
+                                 final_outputs_dict.get("Taxonomy Plots", ""),
+                                 final_outputs_dict.get("Differential Abundance", ""),
+                                 final_outputs_dict.get("Differential Abundance/ANCOMBC1", ""),
+                                 final_outputs_dict.get("Differential Abundance/ANCOMBC2", ""),
+                                 final_outputs_dict.get("Differential Abundance/DESeq2", "")])
 
         # Append row to the association dataframe
         association_df.loc[len(association_df)] = curr_row_as_list
@@ -515,10 +515,10 @@ def main():
     filtered_multiqc_html = f"filtered_multiqc{assay_suffix}.html"
     if include_raw_multiqc_in_output:
         raw_multiqc_html = f"raw_multiqc{assay_suffix}.html"
-        multiqc = [file_prefix + output_prefix + raw_multiqc_html + "," + file_prefix + output_prefix + raw_multiqc_zip, 
-                  file_prefix + output_prefix + filtered_multiqc_html + "," + file_prefix + output_prefix + filtered_multiqc_zip]
+        multiqc = [file_prefix + raw_multiqc_html + "," + file_prefix + raw_multiqc_zip,
+                   file_prefix + filtered_multiqc_html + "," + file_prefix + filtered_multiqc_zip]
     else:
-        multiqc = [file_prefix + output_prefix + filtered_multiqc_html + "," + file_prefix + output_prefix + filtered_multiqc_zip]
+        multiqc = file_prefix + filtered_multiqc_html + "," + file_prefix + filtered_multiqc_zip
     
     # Retrieve a dictionary with sample names as keys and raw fastqfile prefix as values 
     sample_raw_prefix_dict = runsheet_to_dict(args.runsheet) if args.runsheet != "" else ""
