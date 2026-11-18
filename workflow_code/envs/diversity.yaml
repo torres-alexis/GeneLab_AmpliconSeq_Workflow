@@ -29,5 +29,7 @@ dependencies:
     - bioconductor-mia=1.18.0
     - bioconductor-microbiome=1.32.0
     - bioconductor-ancombc=2.12.0
+    - r-cvxr=1.0_15 # ANCOMBC 2.12.0 imports solve, removed from later CVXR releases
+    - r-rbiom=2.2.1 # mia 1.18.0 imports unifrac, removed from later rbiom releases
     - bioconductor-deseq2=1.50.2
     - bioconductor-vsn=3.78.1
