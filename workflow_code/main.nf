@@ -463,7 +463,6 @@ workflow {
 
         ANCOMBC1("ancombc1", meta, dada_counts, dada_taxonomy, metadata, filtered_count)
         ancombc1_ch = ANCOMBC1.out.output_dir
-        da_contrasts_ch = ANCOMBC1.out.contrasts_file
         da_sampleTable_ch = ANCOMBC1.out.sample_table_file
         ANCOMBC1.out.version | mix(software_versions_ch) | set{software_versions_ch}
 
@@ -474,6 +473,11 @@ workflow {
         DESEQ(meta, dada_counts, dada_taxonomy, metadata, ANCOMBC2.out.output_dir)
         deseq2_ch = DESEQ.out.output_dir
         DESEQ.out.version | mix(software_versions_ch) | set{software_versions_ch}
+
+        // Keep the shared contrasts file when ANCOM-BC skips a comparison another method can run.
+        da_contrasts_ch = ANCOMBC1.out.contrasts_file
+            .concat(ANCOMBC2.out.contrasts_file, DESEQ.out.contrasts_file)
+            .take(1)
 
         // Zipping DA plots
 	    //ANCOMBC1

@@ -7,6 +7,7 @@ This is a program for validating GeneLab pipeline processed amplicon datasets.
 import os
 import sys
 import argparse
+import csv
 import textwrap
 import pandas as pd
 import zipfile
@@ -278,8 +279,7 @@ def check_amplicon_final_outputs(validation_log, final_outputs_dir, expected_fin
 
 def check_for_failure_file(validation_log, directory, failure_filename):
     """
-    Check if a failure file exists in the given directory.
-    If it does, log the reason and return True to signal the caller to skip checks.
+    Log and return the reason when a failure file exists.
     """
     failure_path = os.path.join(directory, failure_filename)
     if os.path.exists(failure_path):
@@ -290,8 +290,8 @@ def check_for_failure_file(validation_log, directory, failure_filename):
             validation_log,
             f"    - WARNING: Analysis was skipped in {directory}. Reason:\n      {reason}"
         )
-        return True
-    return False
+        return reason
+    return None
 
 
 def check_rarefaction_depth_consistency(validation_log, alpha_diversity_dir, beta_diversity_dir, output_prefix, assay_suffix):
@@ -323,16 +323,19 @@ def check_rarefaction_depth_consistency(validation_log, alpha_diversity_dir, bet
     )
 
 
-def get_num_contrasts(validation_log, contrasts_file):
-    """ Parse number of contrasts from contrasts.csv header row """
+def count_da_comparisons(validation_log, results_file):
+    """Count pairwise p-value columns in one method's differential abundance results."""
     try:
-        with open(contrasts_file) as f:
-            header = f.readline().strip()
-            # First column is empty/index, rest are contrast names
-            contrasts = [c for c in header.split(",") if c]
-            return len(contrasts)
-    except FileNotFoundError:
-        report_failure(validation_log, f"Contrasts file '{contrasts_file}' not found.")
+        with open(results_file, encoding="utf-8-sig", newline="") as f:
+            header = next(csv.reader(f, strict=True), [])
+    except (OSError, UnicodeError, csv.Error) as exc:
+        report_failure(validation_log, f"Could not read differential abundance results header in '{results_file}': {exc}")
+
+    comparisons = [column for column in header if column.startswith("P-value_(")]
+    if (not comparisons or len(set(comparisons)) != len(comparisons)
+            or any(")v(" not in column or not column.endswith(")") for column in comparisons)):
+        report_failure(validation_log, f"Expected distinct P-value_(group)v(group) comparison columns in '{results_file}'.")
+    return len(comparisons)
 
 
 def check_volcano_plots(validation_log, da_dir, num_contrasts):
@@ -621,26 +624,34 @@ def main():
     append_message_to_log(validation_log, f"    - all expected individual files were found in the {final_outputs_dir} directory")
 
     # Alpha diversity outputs
-    alpha_failure_file = f"{alpha_diversity_dir}/" + str(output_prefix) + f"alpha_diversity_failure{assay_suffix}.txt"
-    if check_for_failure_file(validation_log, alpha_diversity_dir, alpha_failure_file):
+    alpha_failure_file = f"{output_prefix}alpha_diversity_failure{assay_suffix}.txt"
+    alpha_failure = check_for_failure_file(validation_log, alpha_diversity_dir, alpha_failure_file)
+    if alpha_failure is not None:
         append_message_to_log(validation_log, f"    - Skipping alpha diversity validation due to failure file")
     else:
         check_amplicon_final_outputs(validation_log, alpha_diversity_dir, expected_alpha_diversity_outputs_or_suffixes)
         append_message_to_log(validation_log, f"    - all expected files were found in {alpha_diversity_dir}")
 
     # Beta diversity outputs
-    beta_failure_file = f"{beta_diversity_dir}/" + str(output_prefix) + f"beta_diversity_failure{assay_suffix}.txt"
-    beta_failed = check_for_failure_file(validation_log, beta_diversity_dir, beta_failure_file)
-    if beta_failed:
+    beta_failure_file = f"{output_prefix}beta_diversity_failure{assay_suffix}.txt"
+    beta_failure = check_for_failure_file(validation_log, beta_diversity_dir, beta_failure_file)
+    vsd_plot = f"{output_prefix}vsd_validation_plot{assay_suffix}.png"
+    euclidean_dendrogram = f"{output_prefix}euclidean_dendrogram{assay_suffix}.png"
+    if beta_failure is None:
+        check_amplicon_final_outputs(validation_log, beta_diversity_dir, expected_beta_diversity_outputs_or_suffixes)
+        append_message_to_log(validation_log, f"    - all expected files were found in {beta_diversity_dir}")
+    elif "beta diversity group comparisons cannot be performed" in beta_failure:
+        check_amplicon_final_outputs(validation_log, beta_diversity_dir, [vsd_plot, euclidean_dendrogram])
+        append_message_to_log(validation_log, "    - VST diagnostic and Euclidean dendrogram found; skipping group statistics and PCoA")
+    else:
         # VST outputs may still exist even if rarefaction failed
-        vsd_plot = f"{output_prefix}vsd_validation_plot{assay_suffix}.png"
         vsd_path = os.path.join(beta_diversity_dir, vsd_plot)
         if os.path.exists(vsd_path):
             append_message_to_log(validation_log, "    - Rarefaction failed but VST outputs detected, validating VST outputs only")
             vst_only_outputs = [
                 f"{output_prefix}euclidean_adonis_table{assay_suffix}.csv",
                 f"{output_prefix}euclidean_variance_table{assay_suffix}.csv",
-                f"{output_prefix}euclidean_dendrogram{assay_suffix}.png",
+                euclidean_dendrogram,
                 f"{output_prefix}euclidean_PCoA_w_labels{assay_suffix}.png",
                 f"{output_prefix}euclidean_PCoA_without_labels{assay_suffix}.png",
                 vsd_plot
@@ -649,13 +660,8 @@ def main():
             append_message_to_log(validation_log, f"    - expected VST outputs were found in {beta_diversity_dir}")
         else:
             append_message_to_log(validation_log, "    - Skipping beta diversity validation, both rarefaction and VST failed")
-    else:
-        # Full validation of beta diversity outputs if no failure file is present
-        check_amplicon_final_outputs(validation_log, beta_diversity_dir, expected_beta_diversity_outputs_or_suffixes)
-        append_message_to_log(validation_log, f"    - all expected files were found in {beta_diversity_dir}")
-
     # If both alpha and beta diversity outputs are present, check that rarefaction depth is consistent between them
-    if not beta_failed and not os.path.exists(alpha_failure_file):
+    if beta_failure is None and alpha_failure is None:
         check_rarefaction_depth_consistency(validation_log, alpha_diversity_dir, beta_diversity_dir, output_prefix, assay_suffix)
 
     # Taxonomy plots outputs
@@ -666,22 +672,21 @@ def main():
     completed_da_method_dirs = {}
     for method, method_dir in da_method_dirs.items():
         failure_filename = f"{output_prefix}{method}_failure{assay_suffix}.txt"
-        if not check_for_failure_file(validation_log, method_dir, failure_filename):
+        if check_for_failure_file(validation_log, method_dir, failure_filename) is None:
             completed_da_method_dirs[method] = method_dir
 
-    expected_da_outputs = [f"{output_prefix}SampleTable{assay_suffix}.csv"]
+    check_amplicon_final_outputs(validation_log, differential_abundance_dir, [f"{output_prefix}SampleTable{assay_suffix}.csv"])
     if completed_da_method_dirs:
-        expected_da_outputs.append(os.path.basename(contrasts_file))
-    check_amplicon_final_outputs(validation_log, differential_abundance_dir, expected_da_outputs)
+        check_for_file_and_contents(validation_log, contrasts_file)
     append_message_to_log(validation_log, f"    - all expected individual files were found in {differential_abundance_dir}")
 
-    num_contrasts = get_num_contrasts(validation_log, contrasts_file) if completed_da_method_dirs else 0
     for method, method_dir in completed_da_method_dirs.items():
-        expected_outputs = [f"{output_prefix}{method}_differential_abundance{assay_suffix}.csv",
-                            f"{output_prefix}{method}_volcano_plots{assay_suffix}.zip"]
+        result_name = f"{output_prefix}{method}_differential_abundance{assay_suffix}.csv"
+        expected_outputs = [result_name, f"{output_prefix}{method}_volcano_plots{assay_suffix}.zip"]
         if method == "deseq2":
             expected_outputs.append(f"{output_prefix}asv_sparsity_plot{assay_suffix}.png")
         check_amplicon_final_outputs(validation_log, method_dir, expected_outputs)
+        num_contrasts = count_da_comparisons(validation_log, os.path.join(method_dir, result_name))
         check_volcano_plots(validation_log, method_dir, num_contrasts)
         append_message_to_log(validation_log, f"    - all expected files were found in {method_dir}")
 
