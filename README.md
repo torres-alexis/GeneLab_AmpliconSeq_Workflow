@@ -6,7 +6,7 @@
 
 ### Implementation Tools
 
-The current GeneLab Illumina amplicon sequencing data processing pipeline (AmpIllumina) ([GL-DPPD-7104-D](https://github.com/nasa/GeneLab_Data_Processing/blob/master/Amplicon/Illumina/Pipeline_GL-DPPD-7104_Versions/GL-DPPD-7104-D.md)) is implemented as a single [Nextflow](https://nextflow.io/) DSL2 workflow that utilizes [Singularity](https://docs.sylabs.io/guides/3.10/user-guide/introduction.html) to run all tools in containers. This workflow (NF_AmpIllumina) is run using the command line interface (CLI) of any unix-based system. While knowledge of creating workflows in Nextflow is not required to run the workflow as is, [the Nextflow documentation](https://nextflow.io/docs/latest/index.html) is a useful resource for users who want to modify and/or extend this workflow.
+The current GeneLab Illumina amplicon sequencing data processing pipeline (AmpIllumina) ([GL-DPPD-7104-C](https://github.com/nasa/GeneLab_Data_Processing/blob/master/Amplicon/Illumina/Pipeline_GL-DPPD-7104_Versions/GL-DPPD-7104-C.md)) is implemented as a single [Nextflow](https://nextflow.io/) DSL2 workflow that utilizes [Singularity](https://docs.sylabs.io/guides/3.10/user-guide/introduction.html) to run all tools in containers. This workflow (NF_AmpIllumina) is run using the command line interface (CLI) of any unix-based system. While knowledge of creating workflows in Nextflow is not required to run the workflow as is, [the Nextflow documentation](https://nextflow.io/docs/latest/index.html) is a useful resource for users who want to modify and/or extend this workflow.
 
 ### Resource Requirements <!-- omit in toc -->
 
@@ -269,7 +269,7 @@ nextflow run NF_AmpIllumina_1.0.10/main.nf \
 
   * `--assay_suffix` - Assay label appended to output filenames. The target region is inserted before this suffix when `--prepend_target_region` is true (type: string, default: "_GLAmpSeq")
 
-  * `--prepend_target_region` - Prepend `--target_region` to `--assay_suffix`, e.g. "_16S_GLAmpSeq" for a 16S run. Set to false to use `--assay_suffix` as supplied (type: boolean, default: true)
+  * `--prepend_target_region` - Prepend `--target_region` to `--assay_suffix`, e.g. "_16S_GLAmpSeq" for a 16S run. By default the assay suffix is used as supplied (type: boolean, default: false)
 
 * **Sample Selection Parameters** - Options for selecting samples and reads:
 
@@ -287,7 +287,7 @@ nextflow run NF_AmpIllumina_1.0.10/main.nf \
 * `--entry_point` - Specifies the workflow entry point to start from (type: string, default: "raw_reads"). Available options:
   - `raw_reads` - Start from raw read files (.fastq.gz) (default)
   - `trimmed_reads` - Start from primer-trimmed read files (.fastq.gz). Raw read quality-checking and primer removal are skipped
-  - `asv_tables` - Start from one ASV count table and one taxonomy table for the full dataset (e.g. counts_16S_GLAmpSeq.tsv and taxonomy_16S_GLAmpSeq.tsv)
+  - `asv_tables` - Start from one ASV count table and one taxonomy table for the full dataset (e.g. counts_GLAmpSeq.tsv and taxonomy_GLAmpSeq.tsv)
 
 **Additional Optional Parameters:**
 
@@ -309,7 +309,7 @@ Container images for Docker and Singularity are specified in [conf/by_docker_ima
 
 #### 5a. Main outputs
 
-The outputs from this pipeline are documented in the [GL-DPPD-7104-D](https://github.com/nasa/GeneLab_Data_Processing/blob/master/Amplicon/Illumina/Pipeline_GL-DPPD-7104_Versions/GL-DPPD-7104-D.md) processing protocol.
+The outputs from this pipeline are documented in the [GL-DPPD-7104-C](https://github.com/nasa/GeneLab_Data_Processing/blob/master/Amplicon/Illumina/Pipeline_GL-DPPD-7104_Versions/GL-DPPD-7104-C.md) processing protocol.
 
    - Output:
      - GeneLab/software_versions\_\<target_region\>\_GLAmpSeq.txt (version capturing file for all tools and packages used in the pipeline)

@@ -138,8 +138,8 @@ workflow AMPLICON {
         }
 
         def db_config = [
-            '16S': ['SILVA_SSU_r138_2_v2.RData', 'https://api.figshare.com/v2/file/download/64078939'],
-            'ITS': ['UNITE_v2025.RData', 'https://api.figshare.com/v2/file/download/64079011'],
+            '16S': ['SILVA_SSU_r138_2_2024.RData', 'https://api.figshare.com/v2/file/download/52846199'],
+            'ITS': ['UNITE_v2024_April2024.RData', 'https://api.figshare.com/v2/file/download/52846346'],
             '18S': ['PR2_v4_13_March2021.RData', 'https://api.figshare.com/v2/file/download/46241917']
         ]
         DOWNLOAD_DATABASE(channel.value(tuple(params.target_region, db_config[params.target_region][0], db_config[params.target_region][1])))

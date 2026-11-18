@@ -15,7 +15,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Capture workflow commands, process scripts and run metadata automatically in `processing_scripts/`
 - Option to run workflow in accession mode using a local ISA archive (`--isa_archive` parameter)
 - Caching support for reference databases to avoid redundant downloads on repeated runs of the main workflow
-- A Bioconductor package (microbiome 1.32.0) that is required by ANCOMBC >= 2.12
 - Support for `--primers-already-trimmed` behavior in the post-processing workflow by adding `trim_primers` parameter to control inclusion of trimmed-data-related information across its processes
 - Validation for alpha/beta diversity outputs, including failure files and rarefaction depth consistency across both analyses, for taxonomy plots, and for outputs of the three differential abundance methods, including per-method volcano plot counts against number of contrasts
 - `post_processing_schema.json` for parameter validation and automated help menu generation
@@ -29,7 +28,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated post-processing to refresh outputs when resuming
 - Fixed quoting for metadata paths and post-processing arguments
 - Fixed path cleaning when packaging moved outputs
-- Pinned `r-cvxr=1.0_15` and `r-rbiom=2.2.1` for the Conda diversity environment
 - Fixed single-end read staging
 - Fixed empty Cutadapt logs and missing read counts during single-end processing
 - Handled boolean parameters consistently when supplied as boolean or string values
@@ -40,7 +38,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Write a failure text file and continue when metadata has fewer than two groups for beta diversity and differential abundance (ANCOMBC1/2, DESeq2), same as alpha diversity
 - Fixed `assay_suffix` chained parameter evaluation, which was previously evaluated at parse time instead of runtime
 - Fixed ANCOMBC2 column renaming for two-group comparisons with the `diff_robust_*` column returned by ANCOMBC 2.12
-- ANCOMBC2 failing with "$ operator is invalid for atomic vectors" when dropping zero-variance taxa exposes new ones; newly named taxa are now dropped and ANCOMBC2 is run again until it returns a result or names no new taxa
 - Main and post-processing workflows failing under Nextflow's strict v2 syntax parser; moved top-level code into `workflow` blocks and removed config-level `trace_timestamp` and `parent_dir` variables
 
 ### Changed
@@ -70,24 +67,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Wired up `nf-schema` plugin to `nextflow_schema.json` for parameter validation and automated help menu generation
 - Bumped `nf-schema` plugin from 2.6.0 to 2.8.0 and require Nextflow 26.04 or later
 - Run post-processing with `--post_processing`; retain `post_processing.nf` and `post_processing.config` for existing commands
-- Prepend the target region to `assay_suffix` by default, e.g. a 16S run publishes `_16S_GLAmpSeq`. Disable with `--prepend_target_region false`
-- Update pipeline document references from GL-DPPD-7104-C to GL-DPPD-7104-D 
 
-- Updated database versions:
-  - SILVA_SSU_r138.2_v2, downloaded from DECIPHER and uploaded to Figshare (https://doi.org/10.6084/m9.figshare.32118616) in April 2026 
-  - UNITE_v2025, downloaded from DECIPHER and uploaded to Figshare (https://doi.org/10.6084/m9.figshare.32118652) in April 2026
-
-- Updated versions of Cutadapt and certain R/Bioconductor packages to match GeneLab Amplicon Pipeline version [GL-DPPD-7104-D](https://github.com/nasa/GeneLab_Data_Processing/blob/master/Amplicon/Illumina/Pipeline_GL-DPPD-7104_Versions/GL-DPPD-7104-D.md)
-- Replaced tidyverse package with its individually-used component packages across R scripts to ensure specific versions of these packages are being used:
-  - ggplot2 4.0.2
-  - dplyr 1.2.1
-  - readr 2.2.0
-  - stringr 1.6.0
-  - purrr 1.2.1
-  - tibble 3.3.1
-  - tidyr 1.3.2
+- Load the individual R packages used by each script.
 - Removed explicit `library(tools)` loading from R scripts and its respective version capture, as it is automatically loaded with R base
-- Bumped `r-diversity` and `r-dada-decipher-biomformat` singularity images from 1.1 to 1.2 to match R package updates 
 - Updated third-party licenses
 
 ### Removed

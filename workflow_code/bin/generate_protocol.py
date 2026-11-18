@@ -6,9 +6,9 @@ import sys
 
 # Reference database mapping by target region
 REFERENCE_DB = {
-    "16S": "SILVA SSU r138.2",
+    "16S": "SILVA SSU r138.2 (2024)",
     "18S": "PR2 v4.13",
-    "ITS": "UNITE v2025",
+    "ITS": "UNITE v2024 (April 2024)",
 }
 
 def parse_versions(versions_file):

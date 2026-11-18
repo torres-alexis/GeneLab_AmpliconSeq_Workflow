@@ -29,9 +29,9 @@ For entry points other than the default raw_reads, include the relevant columns 
 
 | Column Name | Entry Point | Type | Description | Example |
 |:------------|:------------|:-----|:------------|:--------|
-| trimmed_read1_path | trimmed_reads | string | Path or URL to primer-trimmed forward reads | /my/data/sample1_16S_GLAmpSeq_R1_trimmed.fastq.gz |
-| trimmed_read2_path | trimmed_reads | string | Path or URL to primer-trimmed reverse reads (paired-end only) | /my/data/sample1_16S_GLAmpSeq_R2_trimmed.fastq.gz |
-| counts_table_path | asv_tables | string | Path or URL to the ASV count table (tab-separated) | /my/data/counts_16S_GLAmpSeq.tsv |
-| taxonomy_table_path | asv_tables | string | Path or URL to the matching ASV taxonomy table (tab-separated) | /my/data/taxonomy_16S_GLAmpSeq.tsv |
+| trimmed_read1_path | trimmed_reads | string | Path or URL to primer-trimmed forward reads | /my/data/sample1_GLAmpSeq_R1_trimmed.fastq.gz |
+| trimmed_read2_path | trimmed_reads | string | Path or URL to primer-trimmed reverse reads (paired-end only) | /my/data/sample1_GLAmpSeq_R2_trimmed.fastq.gz |
+| counts_table_path | asv_tables | string | Path or URL to the ASV count table (tab-separated) | /my/data/counts_GLAmpSeq.tsv |
+| taxonomy_table_path | asv_tables | string | Path or URL to the matching ASV taxonomy table (tab-separated) | /my/data/taxonomy_GLAmpSeq.tsv |
 
 For asv_tables, use the same count-table and taxonomy-table paths for every sample row.
