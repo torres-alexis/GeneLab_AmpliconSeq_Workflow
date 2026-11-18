@@ -86,13 +86,13 @@ workflow {
             error "Output directory '${processed_dir}' does not exist. Make sure the main workflow is run first."
        }
 
-       processing_scripts_dir = channel.fromPath("${processed_dir}/processing_scripts", type: 'dir', checkIfExists: true)
+       processing_scripts_dir = channel.fromPath("${processed_dir}/processing_scripts", type: 'dir')
        raw_multiqc_report_dir = params.include_raw_multiqc && !params.force_single_end
-           ? channel.fromPath("${processed_dir}/Raw_Sequence_Data/MultiQC_Reports", type: 'dir', checkIfExists: true)
+           ? channel.fromPath("${processed_dir}/Raw_Sequence_Data/MultiQC_Reports", type: 'dir')
            : channel.value([])
-       final_outputs_dir = channel.fromPath("${processed_dir}/Final_Outputs", type: 'dir', checkIfExists: true)
+       final_outputs_dir = channel.fromPath("${processed_dir}/Final_Outputs", type: 'dir')
 
-       software_versions_ch = channel.fromPath("${processed_dir}/GeneLab/software_versions${params.assay_suffix}.txt", checkIfExists: true)
+       software_versions_ch = channel.fromPath("${processed_dir}/GeneLab/software_versions${params.assay_suffix}.txt")
        def rarefaction_depth_file = file("${processed_dir}/Final_Outputs/alpha_diversity/${cleanedPrefix()}rarefaction_depth${params.assay_suffix}.txt")
        rarefaction_depth_ch = channel.value(rarefaction_depth_file.exists() ? rarefaction_depth_file : [])
 
