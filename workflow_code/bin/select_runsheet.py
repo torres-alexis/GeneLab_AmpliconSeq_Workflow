@@ -38,12 +38,6 @@ def main():
                 f"Available: {[os.path.basename(f) for f in runsheet_files]}"
             )
 
-    if len(runsheet_files) == 1:
-        shutil.copy(runsheet_files[0], os.path.basename(runsheet_files[0]))
-        print(f"Single runsheet found, using: {os.path.basename(runsheet_files[0])}")
-        sys.exit(0)
-
-    # Multiple runsheets — filter by target region
     def get_target_region(filepath):
         with open(filepath, newline='') as f:
             reader = csv.DictReader(f)

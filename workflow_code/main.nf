@@ -130,7 +130,7 @@ workflow {
     } 
     
     // Test input csv file
-    if(params.input_file){
+    if (!params.accession && params.input_file && params.trim_primers) {
         // Test primers
         if(!params.F_primer || !params.R_primer){
 
@@ -244,14 +244,14 @@ workflow {
     filtered_reads_ch = RUN_DADA2.out.reads
             .flatten()
             .map { file ->
-                    // derive sample_id from filename
-                    def sample_id
-                    if (file.name.endsWith("${params.assay_suffix}_R1_filtered.fastq.gz")) {
-                            sample_id = file.name.replace("${params.assay_suffix}_R1_filtered.fastq.gz", "")
-                    } else if (file.name.endsWith("${params.assay_suffix}_R2_filtered.fastq.gz")) {
-                            sample_id = file.name.replace("${params.assay_suffix}_R2_filtered.fastq.gz", "")
+                    def suffixes = ["_R1", "_R2", ""].collect { read ->
+                        "${params.assay_suffix}${read}_filtered.fastq.gz"
                     }
-
+                    def suffix = suffixes.find { file.name.endsWith(it) }
+                    if (!suffix) {
+                        error "Unexpected filtered read filename: ${file.name}"
+                    }
+                    def sample_id = file.name.substring(0, file.name.length() - suffix.length())
                     tuple(sample_id, file)
             }
             .groupTuple(by:0)  // group R1/R2 by sample_id
@@ -310,7 +310,7 @@ workflow {
                 "struc_zero": params.remove_struc_zeros ? "--remove-structural-zeros" : ""
                 ]
         
-        metadata  =  ch_input_file
+        metadata  =  runsheet_ch
 
     }
     meta  = channel.of(values)
