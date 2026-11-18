@@ -377,13 +377,14 @@ common_ids <- intersect(rownames(feature_table), rownames(taxonomy_table))
 
 # Subset the feature and taxonomy tables to contain 
 # only features found in both table
-feature_table <- feature_table[common_ids,]
+feature_table <- feature_table[common_ids, , drop = FALSE]
 taxonomy_table <- taxonomy_table[common_ids,]
 
 # ANCOMBC refuses a group with fewer than 2 samples and the pairwise loop quits.
 # Drop those groups and write them to samples_dropped<assay_suffix>.txt.
 group_n <- table(metadata[[group]])
-drop_groups <- names(group_n)[group_n < 2]
+original_group_count <- sum(group_n > 0L)
+drop_groups <- names(group_n)[group_n == 1L]
 if (length(drop_groups) > 0) {
   dropped_samples <- sort(rownames(metadata)[metadata[[group]] %in% drop_groups])
   dropped_sample_groups <- metadata[dropped_samples, group]
@@ -399,20 +400,12 @@ if (length(drop_groups) > 0) {
   )
 }
 
-# Create phyloseq object
-ps <- phyloseq(otu_table(feature_table, taxa_are_rows = TRUE),
-               sample_data(metadata),
-               tax_table(as.matrix(taxonomy_table)))
-
-# Convert phyloseq to tree summarized experiment object
-tse <-  mia::makeTreeSummarizedExperimentFromPhyloseq(ps)
-
 group_levels <- metadata[,group] %>% unique() %>% sort()
 if (length(group_levels) < 2) {
   warning_file <- glue("{diff_abund_out_dir}{output_prefix}ancombc1_failure{assay_suffix}.txt")
   writeLines(
     text = glue("Group count information:
-Original number of groups: {length(group_levels)}
+Original number of groups: {original_group_count}
 Number of groups after filtering: {length(group_levels)}
 
 There are less than two groups to compare, hence, pairwise comparisons cannot be performed.
@@ -421,6 +414,14 @@ Please ensure that your metadata contains two or more groups to compare..."),
   )
   quit(status = 0)
 }
+
+# Create phyloseq object
+ps <- phyloseq(otu_table(feature_table, taxa_are_rows = TRUE),
+               sample_data(metadata),
+               tax_table(as.matrix(taxonomy_table)))
+
+# Convert phyloseq to tree summarized experiment object
+tse <-  mia::makeTreeSummarizedExperimentFromPhyloseq(ps)
 
 # Get unique group comparison as a matrix
 pairwise_comp.m <- utils::combn(group_levels, 2)
