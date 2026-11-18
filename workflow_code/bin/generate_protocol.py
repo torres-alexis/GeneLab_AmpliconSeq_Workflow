@@ -8,7 +8,7 @@ import sys
 REFERENCE_DB = {
     "16S": "SILVA SSU r138.2",
     "18S": "PR2 v4.13",
-    "ITS": "UNITE v2025",
+    "ITS": "UNITE v2024",
 }
 
 def parse_versions(versions_file):
@@ -133,17 +133,23 @@ def generate_protocol(args, versions, rarefaction_depth):
     )
 
     # --- Paragraph 6: Differential abundance ---
-    diff_abund = (
-        f"Differential abundance testing: Differential abundance testing was performed using three different methods: "
-        f"ANCOM-BC v{v['ancombc']}, ANCOM-BC2 v{v['ancombc']} and DESeq2 v{v['deseq']}. "
-        f"ANCOM-BC was run once for each pair-wise group comparison using a Z-test to generate p-values derived from "
-        f"the W statistic in a log-linear regression model with bias correction. "
-        f"ANCOM-BC2 utilized a pairwise directional test to perform pair-wise group comparisons. "
-        f"DESeq2 was used to perform pair-wise group comparisons using the Wald test with a negative binomial generalized linear model. "
-        f"FDR was used to adjust for multiple comparisons testing and to generate an adjusted p-value in all 3 methods. "
-        f"To visualize group-wise differences, volcano plots were generated for each pair-wise comparison for each differential abundance method. "
-        f"Only ASVs with an adjusted p-value less than or equal to 0.1 were considered significant."
-    )
+    methods = {
+        "ancombc1": ("ANCOM-BC", "ancombc", "was run once for each pair-wise group comparison using a Z-test to generate p-values from the W statistic in a log-linear regression model with bias correction."),
+        "ancombc2": ("ANCOM-BC2", "ancombc", "used a pairwise directional test for pair-wise group comparisons."),
+        "deseq2": ("DESeq2", "deseq", "used the Wald test with a negative binomial generalized linear model for pair-wise group comparisons."),
+    }
+    selected = methods.values() if args.diff_abund_method == "all" else [methods[args.diff_abund_method]]
+    method_sentences = [
+        f"{name} v{v[package]} {description}"
+        for name, package, description in selected
+    ]
+    diff_abund = " ".join([
+        "Differential abundance testing:",
+        *method_sentences,
+        "FDR was used to adjust p-values for multiple comparisons.",
+        "Volcano plots were generated for each pair-wise comparison.",
+        "Only ASVs with an adjusted p-value less than or equal to 0.1 were considered significant.",
+    ])
 
     # --- Paragraph 7: Note ---
     if args.force_single_end:
@@ -169,6 +175,7 @@ def main():
     parser.add_argument('--max_ee', required=True, help='maxEE values as "left,right" (e.g. "2,2")')
     parser.add_argument('--trim_primers', action='store_true', help='Include cutadapt primer trimming sentence')
     parser.add_argument('--force_single_end', default=None, help='If the data is paired-end but was processed as single-end, specify which read was used as single-end (R1 or R2)')
+    parser.add_argument('--diff_abund_method', choices=('all', 'ancombc1', 'ancombc2', 'deseq2'), default='all', help='Differential abundance method used during processing')
 
     args = parser.parse_args()
 

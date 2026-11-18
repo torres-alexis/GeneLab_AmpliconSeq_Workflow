@@ -4,6 +4,7 @@ include { validateParameters; paramsHelp } from 'plugin/nf-schema'
 
 include { PACKAGE_PROCESSING_INFO; GENERATE_README; VALIDATE_PROCESSING;
            GENERATE_CURATION_TABLE; GENERATE_MD5SUMS; GENERATE_PROTOCOL} from './modules/genelab.nf'
+include { cleanedPrefix } from './modules/utils.nf'
 
 
 workflow {
@@ -78,15 +79,13 @@ workflow {
             error "Output directory '${processed_dir}' does not exist. Make sure the main workflow is run first."
        }
 
-       processing_scripts_dir = Channel.fromPath("${processed_dir}/processing_scripts", type: 'dir')
-       
-       raw_multiqc_report_dir = channel.fromPath("${processed_dir}/Raw_Sequence_Data/MultiQC_Reports", type: 'dir')
-       final_outputs_dir = channel.fromPath("${processed_dir}/Final_Outputs", type: 'dir')
-     
-       software_versions_ch   =  channel.fromPath("${processed_dir}/GeneLab/software_versions_*.txt")
-       rarefaction_depth_ch =  channel
-                                  .fromPath("${processed_dir}/Final_Outputs/alpha_diversity/*rarefaction_depth${params.assay_suffix}.txt")
-                                  .ifEmpty { file("empty_depth.txt").tap { it.text = "" } }
+       processing_scripts_dir = channel.fromPath("${processed_dir}/processing_scripts", type: 'dir', checkIfExists: true)
+       raw_multiqc_report_dir = channel.fromPath("${processed_dir}/Raw_Sequence_Data/MultiQC_Reports", type: 'dir', checkIfExists: true)
+       final_outputs_dir = channel.fromPath("${processed_dir}/Final_Outputs", type: 'dir', checkIfExists: true)
+
+       software_versions_ch = channel.fromPath("${processed_dir}/GeneLab/software_versions${params.assay_suffix}.txt", checkIfExists: true)
+       def rarefaction_depth_file = file("${processed_dir}/Final_Outputs/alpha_diversity/${cleanedPrefix()}rarefaction_depth${params.assay_suffix}.txt")
+       rarefaction_depth_ch = channel.value(rarefaction_depth_file.exists() ? rarefaction_depth_file : [])
 
 
         // If an assay table is provided use it as the input table otherwise use the provided ISA zip file - no longer needed, using GLfile.csv for GENERATE_CURATION_TABLE
