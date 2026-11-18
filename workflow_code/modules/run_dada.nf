@@ -26,6 +26,9 @@ process RUN_DADA2 {
     script:
         def input_dir     = params.trim_primers ? "Trimmed_Sequence_Data/" : "raw_reads/"
         def trimmed_count = params.trim_primers ? "${trimmed_read_counts}" : ""
+        def trimming_reverse = params.force_single_end == "R2"
+        def single_end_trunc = trimming_reverse ? params.right_trunc : params.left_trunc
+        def single_end_maxEE = trimming_reverse ? params.right_maxEE : params.left_maxEE
         
         def starting_reads_suffix = params.trim_primers ? "trimmed" : "raw"
         def R1_suffix     = "${params.assay_suffix}_R1_${starting_reads_suffix}.fastq.gz"   
@@ -71,8 +74,8 @@ process RUN_DADA2 {
                 "${database.name}"
         else
             Illumina-SE-R-processing.R \\
-                "${params.left_trunc}" \\
-                "${params.left_maxEE}" \\
+                "${single_end_trunc}" \\
+                "${single_end_maxEE}" \\
                 "${params.trim_primers ? 'TRUE' : 'FALSE'}" \\
                 ${sample_IDs_file} \\
                 "${input_dir}" \\
