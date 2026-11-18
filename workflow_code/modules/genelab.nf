@@ -54,6 +54,7 @@ process GENERATE_README {
 
 
 process VALIDATE_PROCESSING {
+    cache false
 
     tag "Running automated validation and verification...."
 
@@ -82,6 +83,7 @@ process VALIDATE_PROCESSING {
              --output-prefix '${cleanedPrefix()}' \\
              --zip_targets '${target_files}' \\
              --assay_suffix '${params.assay_suffix}' \\
+             --diff-abund-method '${params.diff_abund_method}' \\
              --raw_suffix "${params.assay_suffix}_raw.fastq.gz" \\
              --raw_R1_suffix "${params.assay_suffix}_R1_raw.fastq.gz" \\
              --raw_R2_suffix "${params.assay_suffix}_R2_raw.fastq.gz" \\
@@ -140,13 +142,15 @@ process GENERATE_CURATION_TABLE {
 
 
 process GENERATE_MD5SUMS {
-    
+    cache false
+
     beforeScript "chmod +x ${projectDir}/bin/*"
     tag "Generating md5sums for the files to be released on OSDR..."
  
     input:
         val(processed_dir)
-        val(done_token)
+        path(readme)
+        path(processing_info)
 
     output:
         path({ "${cleanedPrefix()}raw_md5sum${params.assay_suffix}.tsv" }), emit: raw_md5sum, optional: true
@@ -155,7 +159,8 @@ process GENERATE_MD5SUMS {
         def raw_md5_flag = (!params.force_single_end && params.include_raw_data) ? "--generate_raw_md5sums" : ""
         def primers_flag = params.trim_primers ? "" : "--primers_already_trimmed"
         """
-        generate_md5sums.py --outdir ${processed_dir} --assay_suffix '${params.assay_suffix}' --output_prefix '${cleanedPrefix()}' ${raw_md5_flag} ${primers_flag}
+        generate_md5sums.py --outdir '${processed_dir}' --readme '${readme}' --processing_info '${processing_info}' \\
+            --assay_suffix '${params.assay_suffix}' --output_prefix '${cleanedPrefix()}' ${raw_md5_flag} ${primers_flag}
         """
 }
 
@@ -174,13 +179,14 @@ process GENERATE_PROTOCOL {
     script:
         def trim_flag = params.trim_primers ? "--trim_primers" : ""
         def force_single_end_flag = params.force_single_end ? "--force_single_end ${params.force_single_end}" : ""
+        def depth_flag = rarefaction_depth ? "--rarefaction_depth_file '${rarefaction_depth}'" : ""
         """
         generate_protocol.py ${software_versions} ${protocol_id} \\
-            --rarefaction_depth_file ${rarefaction_depth} \\
             --target_region ${params.target_region} \\
             --trunc_len "${params.left_trunc},${params.right_trunc}" \\
             --max_ee "${params.left_maxEE},${params.right_maxEE}" \\
             --workflow_version ${workflow.manifest.version} \\
-            ${force_single_end_flag} ${trim_flag}
+            --diff_abund_method '${params.diff_abund_method}' \\
+            ${force_single_end_flag} ${trim_flag} ${depth_flag}
         """
 }
